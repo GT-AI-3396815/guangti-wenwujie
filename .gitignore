@@ -1,0 +1,5 @@
+shots/
+*.log
+__pycache__/
+_check.js
+logo_b64.txt
