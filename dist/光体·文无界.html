@@ -635,8 +635,8 @@ input:focus-visible {
 
   var DEFAULT_CONFIG = {
     baseUrl: 'https://api.deepseek.com/v1/chat/completions',
-    apiKey: 'sk-8653ab2cd6e348448f40916a1ab97975',
-    model: 'deepseek-v4-flash',
+    apiKey: 'sk-54eed41ec2c649fcb3f871887e7e53bf',
+    model: 'deepseek-v4-flash-vision-exp',
   };
 
   var CFG_KEY = 'wenwujie_llm_config';
@@ -788,8 +788,8 @@ input:focus-visible {
       // 推理模型偶发把 token 全花在思考上导致标题为空 —— 重试一次
       return attempt();
     }).catch(function () {
-      // 标题失败不应阻断正文生成，回落到默认标题
-      return [];
+      // 第一次请求抛错（限流/网络抖动）同样重试一次；标题失败不应阻断正文生成
+      return attempt().catch(function () { return []; });
     });
   };
 })(window.WJ = window.WJ || {});
