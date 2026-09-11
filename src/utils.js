@@ -1,10 +1,13 @@
-/* 光体·文无界 — 工具层（额度 / 历史 / 导出）
+/* 光体·文无界 — 工具层（额度 / 历史 / 导出 / 内容体检）
  *
  * 相对原站修复：
- *  [BUG-10] 原站历史记录只存在 React state 里，刷新页面全部丢失，
- *           但界面却叫「生成历史」，属于实打实的数据丢失。这里持久化到 localStorage。
- *  [BUG-11] 原站额度初始值硬编码 useState(100)，刷新瞬间会闪一下 100 再跳到真实值。
- *           这里初始化即读本地真实值。
+ *  [BUG-10] 历史持久化
+ *  [BUG-11] 额度初始化读本地真实值
+ *
+ * 本次新增：
+ *  [NEW-12] 内容体检：字数/阅读时长/金句数/风险词检测
+ *  [NEW-13] 历史导出/导入 JSON（跨设备备份）
+ *  [NEW-14] 配图提示词生成（供即梦/Midjourney 出真实配图）
  */
 (function (WJ) {
   'use strict';
@@ -18,6 +21,7 @@
   }
 
   WJ.quota = {
+    demo: true,   // [NEW-13] 纯前端计数，界面需标注"演示额度"
     limit: DAILY_LIMIT,
     get: function () {
       try {
@@ -78,6 +82,87 @@
       WJ.history.save([]);
       return [];
     },
+    /* [NEW-13] 导出全部历史为 JSON 文件 */
+    exportJson: function () {
+      var data = JSON.stringify({ app: 'guangti-wenwujie', version: 2, items: WJ.history.load() }, null, 2);
+      var blob = new Blob([data], { type: 'application/json;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = '光体文无界_历史备份_' + today() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    },
+    /* [NEW-13] 从 JSON 文件导入历史（按 id 去重合并），返回新列表；失败返回 null */
+    importJsonText: function (text) {
+      try {
+        var o = JSON.parse(text);
+        var items = Array.isArray(o) ? o : (o && Array.isArray(o.items) ? o.items : null);
+        if (!items) return null;
+        var valid = items.filter(function (it) {
+          return it && typeof it.content === 'string' && typeof it.id !== 'undefined';
+        });
+        if (!valid.length) return null;
+        var exist = {};
+        WJ.history.load().forEach(function (h) { exist[h.id] = true; });
+        var merged = WJ.history.load();
+        valid.forEach(function (it) {
+          if (!exist[it.id]) { merged.push(it); exist[it.id] = true; }
+        });
+        merged.sort(function (a, b) { return String(b.id).localeCompare(String(a.id)); });
+        WJ.history.save(merged);
+        return merged;
+      } catch (e) {
+        return null;
+      }
+    },
+  };
+
+  /* ---------------- [NEW-12] 内容体检 ---------------- */
+  var RISK_WORDS = [
+    '根治', '治愈', '包治', '疗效', '彻底解决', '排毒', '清宿便',
+    '稳赚', '保本', '躺赚', '翻倍', '百分百', '100%', '保证收益',
+    '第一品牌', '国家级', '最高级', '绝无仅有', '万能', '包好',
+  ];
+
+  WJ.audit = function (content) {
+    var lines = String(content || '').split('\n');
+    var text = lines.join('');
+    var chars = text.replace(/\s/g, '').length;
+    var minutes = Math.max(1, Math.round(chars / 400)); // 中文阅读约 400 字/分钟
+
+    var golden = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var t = lines[i].trim();
+      // 独立成行的短句（≤30字、以句末标点收尾）视为金句
+      if (t.length >= 6 && t.length <= 30 && /[。！？…]$/.test(t) && t.indexOf('【') !== 0 && !/^[━═─-]+$/.test(t)) {
+        golden++;
+      }
+    }
+
+    var risks = [];
+    for (var j = 0; j < RISK_WORDS.length; j++) {
+      var w = RISK_WORDS[j];
+      var count = text.split(w).length - 1;
+      if (count > 0) risks.push({ word: w, count: count });
+    }
+
+    return { chars: chars, minutes: minutes, golden: golden, risks: risks };
+  };
+
+  /* ---------------- [NEW-14] 配图提示词 ---------------- */
+  /* 从正文中挑 3 个画面感强的句子，生成文生图提示词（供即梦/Midjourney使用） */
+  WJ.imagePrompts = function (content, dimension) {
+    var captions = WJ.pickImageCaptions ? WJ.pickImageCaptions(content) : [];
+    while (captions.length < 3) captions.push(dimension || '古老文明');
+    var style = '电影感构图，暖金色调，超高清细节，史诗氛围';
+    return captions.map(function (c, i) {
+      return '配图' + (i + 1) + '：' + c.substring(0, 24) + '…… → 提示词：' +
+        dimension + '，' + (i === 0 ? '宏伟全景' : (i === 1 ? '人物特写' : '细节纹样')) +
+        '，' + style;
+    });
   };
 
   /* ---------------- 下载 ---------------- */

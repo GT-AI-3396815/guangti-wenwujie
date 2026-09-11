@@ -1,14 +1,15 @@
 /* 光体·文无界 — 模型接口层
  *
  * 相对原站修复：
- *  [BUG-1] max_tokens 从 4000 提到 16000。原站用 deepseek-v4-flash，这是推理模型，
- *          会先产出 reasoning_content 再产出 content，4000 token 里思考链就吃掉大半，
- *          导致正文被截断甚至 content 直接为空（实测 max_tokens=20 时 content 为 ""）。
- *  [BUG-2] 新增 finish_reason==='length' 截断检测，明确告诉用户内容被截断。
- *  [BUG-3] 新增超时控制（默认 180s）与 AbortController，避免请求挂死界面卡在「生成中」。
- *  [BUG-4] 新增针对推理模型 content 为空的自动重试（降低 temperature 再试一次）。
- *  [BUG-5] 错误按状态码分类，给出可操作的中文提示，而不是抛一句英文 API 报错。
- *  [BUG-6] API Key 不再写死成常量，改为可在「设置」中替换并持久化（仍提醒前端暴露风险）。
+ *  [BUG-1] max_tokens 从 4000 提到 16000（推理模型的思考链开销）
+ *  [BUG-2] finish_reason==='length' 截断检测
+ *  [BUG-3] 超时控制与 AbortController
+ *  [BUG-4] 推理模型 content 为空的自动重试
+ *  [BUG-5] 错误按状态码分类，给可操作的中文提示
+ *  [BUG-6] API Key 可在「设置」中替换并持久化
+ *
+ * 本次新增：
+ *  [NEW-11] 流式输出（SSE），生成过程中实时回显；流式失败自动降级为普通请求
  */
 (function (WJ) {
   'use strict';
@@ -65,13 +66,17 @@
     return '接口返回错误（' + status + '）：' + String(body || '').slice(0, 200);
   }
 
-  /**
-   * 调用模型
-   * @param {Array}  messages    消息数组
-   * @param {Number} temperature 温度
-   * @param {Number} maxTokens   最大输出 token
-   * @returns {Promise<{content:String, truncated:Boolean}>}
-   */
+  function buildBody(messages, temperature, maxTokens, stream) {
+    return JSON.stringify({
+      model: WJ.getConfig().model,
+      messages: messages,
+      temperature: temperature,
+      max_tokens: maxTokens,
+      stream: !!stream,
+    });
+  }
+
+  /* ---------------- 普通请求 ---------------- */
   WJ.callModel = function (messages, temperature, maxTokens) {
     var cfg = WJ.getConfig();
     var controller = new AbortController();
@@ -83,12 +88,7 @@
         'Content-Type': 'application/json',
         Authorization: 'Bearer ' + cfg.apiKey,
       },
-      body: JSON.stringify({
-        model: cfg.model,
-        messages: messages,
-        temperature: temperature,
-        max_tokens: maxTokens,
-      }),
+      body: buildBody(messages, temperature, maxTokens, false),
       signal: controller.signal,
     }).then(function (res) {
       return res.text().then(function (text) {
@@ -98,7 +98,6 @@
         var choice = (data.choices || [])[0] || {};
         var msg = choice.message || {};
         return {
-          // 推理模型可能把正文放在 content，也可能只有 reasoning_content
           content: (msg.content || '').trim(),
           reasoning: (msg.reasoning_content || '').trim(),
           truncated: choice.finish_reason === 'length',
@@ -116,11 +115,106 @@
     });
   };
 
-  /**
-   * 生成正文。带一次「推理模型空内容」重试。
+  /* ---------------- [NEW-11] 流式请求 ----------------
+   * 返回 {content, truncated}；onDelta(accumulatedText) 在每个增量后回调。
+   * 流式不受 180s 超时打断（有增量就活着），仅 60s 无增量判超时。
    */
-  WJ.generateContent = function (messages, temperature, maxTokens) {
-    return WJ.callModel(messages, temperature, maxTokens).then(function (r) {
+  WJ.callModelStream = function (messages, temperature, maxTokens, onDelta) {
+    var cfg = WJ.getConfig();
+    var controller = new AbortController();
+    var lastActivity = Date.now();
+    var watchdog = setInterval(function () {
+      if (Date.now() - lastActivity > 60000) {
+        controller.abort();
+      }
+    }, 5000);
+
+    function cleanup() { clearInterval(watchdog); }
+
+    return fetch(cfg.baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + cfg.apiKey,
+      },
+      body: buildBody(messages, temperature, maxTokens, true),
+      signal: controller.signal,
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (text) {
+          throw new Error(friendlyError(res.status, text));
+        });
+      }
+      if (!res.body || !res.body.getReader) {
+        // 环境不支持流式，调用方会降级
+        var noStream = new Error('NO_STREAM_SUPPORT');
+        noStream.code = 'NO_STREAM_SUPPORT';
+        throw noStream;
+      }
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder('utf-8');
+      var buf = '';
+      var full = '';
+      var truncated = false;
+
+      function pump() {
+        return reader.read().then(function (chunk) {
+          lastActivity = Date.now();
+          if (chunk.done) {
+            cleanup();
+            return { content: full.trim(), truncated: truncated };
+          }
+          buf += decoder.decode(chunk.value, { stream: true });
+          var lines = buf.split('\n');
+          buf = lines.pop(); // 最后一段可能不完整，留在缓冲
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line || line.indexOf('data:') !== 0) continue;
+            var payload = line.slice(5).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              var j = JSON.parse(payload);
+              var ch = (j.choices || [])[0] || {};
+              var piece = (ch.delta && ch.delta.content) || '';
+              if (piece) {
+                full += piece;
+                if (onDelta) { try { onDelta(full); } catch (e) { /* 回调异常不影响流 */ } }
+              }
+              if (ch.finish_reason === 'length') truncated = true;
+            } catch (e) { /* 单片解析失败忽略 */ }
+          }
+          return pump();
+        });
+      }
+
+      return pump();
+    }).catch(function (err) {
+      cleanup();
+      if (err && err.code === 'NO_STREAM_SUPPORT') throw err;
+      if (err.name === 'AbortError') {
+        var t = new Error('流式请求超时（60秒无增量）。请重试。');
+        throw t;
+      }
+      throw err;
+    });
+  };
+
+  /**
+   * 生成正文：优先流式（onDelta 实时回显），失败降级为普通请求，
+   * 并带一次「推理模型空内容」重试。
+   */
+  WJ.generateContent = function (messages, temperature, maxTokens, onDelta) {
+    function nonStreamFallback() {
+      return WJ.callModel(messages, temperature, maxTokens).then(function (r) {
+        if (r.content && onDelta) { try { onDelta(r.content); } catch (e) { /* ignore */ } }
+        return r;
+      });
+    }
+
+    return WJ.callModelStream(messages, temperature, maxTokens, onDelta).catch(function (err) {
+      // 流式不支持 / 偶发失败 → 降级普通请求
+      return nonStreamFallback();
+    }).then(function (r) {
       if (r.content && r.content.length >= 50) {
         return { content: r.content, truncated: r.truncated };
       }
@@ -132,6 +226,7 @@
           }
           throw new Error('模型返回内容为空，请重试。');
         }
+        if (onDelta) { try { onDelta(r2.content); } catch (e) { /* ignore */ } }
         return { content: r2.content, truncated: r2.truncated };
       });
     });

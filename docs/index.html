@@ -95,7 +95,11 @@ input:focus-visible {
 <script>
 /* ==== data.js ==== */
 /* 光体·文无界 — 数据层
- * 全部数据从原站 https://llwtsscpjckdm.ok.kimi.link/ 完整迁移
+ * 迁移自原站，并按专业审计补齐：
+ *  [NEW-1] 维度分级（史实 / 传说争议），传说类维度自动附免责声明
+ *  [NEW-2] 敏感行业清单 + 合规检查清单（广告法/医疗/金融口径）
+ *  [NEW-3] CTA 转化目标可配置
+ *  [NEW-4] 平台描述与实现对齐（摘要/问题体/简介分P/真实话题词）
  */
 (function (WJ) {
   'use strict';
@@ -138,10 +142,62 @@ input:focus-visible {
     '音频疗愈', '色彩疗愈', '自然疗法', '宇宙意识',
   ];
 
-  /* ---------- 内容类型（6 种）
-   * 修复：原站 UI 声称「可多选」，实际只取 types[0] 生成。
-   * 改为单选，选择即生效，不再误导。
+  /* ---------- [NEW-1] 维度分级 ----------
+   * fact    史实维度：考古/文献可查证，正常写作
+   * mystery 传说争议维度：以"据传说/据某学说"口径写作，成稿附免责声明
    */
+  WJ.MYSTERY_DIMENSIONS = [
+    '北纬三十度文明', '红水河文化',
+    '亚特兰蒂斯文明', '利莫里亚文明', '姆大陆文明', '山海经文明',
+    '巨人族文明', '外星远古接触', '地心世界', '前亚当文明',
+    'UFO与外星文明', '百慕大三角', '曼德拉效应',
+  ];
+
+  WJ.DISCLAIMER = '本文涉及内容为民间传说、神话文本与未经科学证实的假说，不代表定论，仅供文化视角阅读参考。';
+
+  WJ.dimensionTag = function (dimension) {
+    return WJ.MYSTERY_DIMENSIONS.indexOf(dimension) >= 0 ? 'mystery' : 'fact';
+  };
+
+  /* ---------- [NEW-2] 敏感行业合规清单（广告法 / 医疗 / 金融口径） ---------- */
+  WJ.COMPLIANCE = {
+    '健康养生': [
+      '不得宣称疾病预防、治疗功效（广告法第十七条）',
+      '不得使用"根治""治愈""包好"等医疗用语',
+      '涉及养生建议需加"因人而异，必要时请就医"提示',
+    ],
+    '中医养生': [
+      '不得宣称对疾病的治疗效果',
+      '药膳方剂需注明"请在医师指导下使用"',
+      '不得贬低现代医学或夸大中医疗效',
+    ],
+    '营养食疗': [
+      '普通食品不得宣称保健功能或治疗功效',
+      '"排毒""清宿便"等伪科学表述需替换为规范说法',
+      '营养建议需注明"不构成医疗建议"',
+    ],
+    '抗衰老': [
+      '"抗衰老"仅可描述主观感受，不得宣称逆转生理年龄',
+      '不得使用医疗级效果承诺（如"年轻十岁"）',
+      '功效类表述需有公开可查的研究支持',
+    ],
+    '睡眠管理': [
+      '不得宣称治疗失眠症等疾病（属医疗行为）',
+      '褪黑素等助眠产品描述需符合保健食品规范',
+    ],
+    '投资理财': [
+      '不得承诺收益、保本、稳赚（资管新规与广告法）',
+      '不得使用"躺赚""翻倍""百分百盈利"等表述',
+      '需加"市场有风险，投资需谨慎"提示',
+      '不得推荐具体标的或暗示内幕信息',
+    ],
+  };
+
+  WJ.isSensitive = function (dimension) {
+    return !!WJ.COMPLIANCE[dimension];
+  };
+
+  /* ---------- 内容类型（6 种，单选） ---------- */
   WJ.CONTENT_TYPES = [
     {
       id: 'long-form', name: '深度长文', icon: 'FileText',
@@ -175,17 +231,17 @@ input:focus-visible {
     },
   ];
 
-  /* ---------- 目标平台（9 个） ---------- */
+  /* ---------- 目标平台（9 个）——描述与实现对齐 ---------- */
   WJ.PLATFORMS = [
-    { id: 'wechat-mp', name: '公众号', description: '自动生成标题、摘要、正文格式' },
-    { id: 'wechat-moments', name: '朋友圈', description: '自动生成适合朋友圈的短文案' },
-    { id: 'xiaohongshu', name: '小红书', description: '自动生成种草风格文案、emoji' },
-    { id: 'zhihu', name: '知乎', description: '自动生成问题标题、回答结构' },
-    { id: 'zsxq', name: '知识星球', description: '自动生成付费内容格式、引导语' },
-    { id: 'channels', name: '视频号', description: '自动生成适合微信生态的文案' },
-    { id: 'douyin', name: '抖音', description: '自动生成竖屏脚本、话题标签' },
-    { id: 'kuaishou', name: '快手', description: '自动生成接地气风格文案' },
-    { id: 'bilibili', name: 'B站', description: '自动生成视频标题、简介、分P标题' },
+    { id: 'wechat-mp', name: '公众号', description: '标题+摘要+正文，摘要可直接填公众号摘要栏' },
+    { id: 'wechat-moments', name: '朋友圈', description: '朋友圈短文案，含话题词' },
+    { id: 'xiaohongshu', name: '小红书', description: '种草风格正文+8~12个真实话题词' },
+    { id: 'zhihu', name: '知乎', description: '问题体标题+回答结构' },
+    { id: 'zsxq', name: '知识星球', description: '付费内容格式、引导语' },
+    { id: 'channels', name: '视频号', description: '微信生态文案+话题词' },
+    { id: 'douyin', name: '抖音', description: '竖屏脚本+8~12个真实话题词' },
+    { id: 'kuaishou', name: '快手', description: '接地气风格文案+话题词' },
+    { id: 'bilibili', name: 'B站', description: '视频标题+简介+分P标题+话题词' },
   ];
 
   /* ---------- 平台在预览头部的展示名 / 署名 ---------- */
@@ -199,6 +255,23 @@ input:focus-visible {
     公众号: '订阅号 · 光体•文无界', 小红书: '小红书', 知乎: '知乎 · 问答社区',
     朋友圈: '朋友圈', 知识星球: '知识星球',
     抖音: '抖音', 快手: '快手', 视频号: '微信视频号', 'B站': '哔哩哔哩',
+  };
+
+  /* ---------- [NEW-3] CTA 转化目标 ---------- */
+  WJ.CTA_OPTIONS = [
+    { id: 'interact', name: '评论互动', desc: '用问题引导评论区讨论' },
+    { id: 'follow', name: '关注涨粉', desc: '引导关注账号形成追更' },
+    { id: 'private', name: '引流私域', desc: '引导领资料/进群/私信' },
+    { id: 'sales', name: '带货转化', desc: '产品种草与购买引导' },
+    { id: 'none', name: '不加引导', desc: '纯内容收尾' },
+  ];
+
+  WJ.CTA_INSTRUCTIONS = {
+    interact: '结尾互动引导读者在评论区讨论（提出一个具体的开放性问题）。',
+    follow: '结尾引导读者关注账号，理由要与内容强相关（如"下一篇拆解XX"，不能空喊"关注我"）。',
+    private: '结尾引导读者私信或查看主页领取配套资料/工具清单，话术自然，不硬推销。',
+    sales: '结尾加入与内容相关的产品/服务种草和购买引导，先价值后推荐，不超过3行。',
+    none: '结尾不加任何行动引导，以金句或开放式提问自然收束。',
   };
 
   /* ---------- 配图配色主题（8 套） ---------- */
@@ -223,7 +296,13 @@ input:focus-visible {
 
 /* ==== prompts.js ==== */
 /* 光体·文无界 — 提示词层
- * 写作人格与各内容类型结构模板，逐字迁移自原站
+ * 写作人格与各内容类型结构模板，迁移自原站并按专业审计升级：
+ *  [NEW-5] 传说争议维度强制"据传说/据某学说"口径，禁止当史实陈述
+ *  [NEW-6] 长文/问答自动追加【事实来源与延伸阅读】区块
+ *  [NEW-7] 平台招牌字段：公众号摘要 / 知乎问题体 / B站简介+分P / 话题词
+ *  [NEW-8] CTA 转化目标注入
+ *  [NEW-9] 改写模式（润色/精简/扩写/换平台）、选题灵感、系列大纲提示词
+ *  [NEW-10] 标题数字真实性自检
  */
 (function (WJ) {
   'use strict';
@@ -242,6 +321,11 @@ input:focus-visible {
     '- 只使用广为人知、可查证的真实事实、数据、人物、年代；宁可少写一个数字，也不编造一个假数字',
     '- 拿不准的具体数字改用可靠的范围表述（如"近千年""数以万计"），绝不能虚构精确数据',
     '- 每篇至少3个真实存在的人名/地名/文物名/事件名，细节（年代、地点、数字）必须相互一致',
+    '',
+    '【维度口径——传说与争议】',
+    '- 对神话、传说、假说类主题（如亚特兰蒂斯、地心世界、外星接触、曼德拉效应等）：',
+    '  必须用"据传说""柏拉图的记载称""坊间流传""该假说认为"等口径转述，绝不把传说当史实陈述',
+    '- 对史实类主题：按【事实纪律】正常执行',
     '',
     '【文风禁令——AI 腔黑名单】',
     '- 禁用短语："在这个...的时代""众所周知""不禁让人""让我们一起""总的来说""首先其次最后""可以说""毫无疑问""毋庸置疑""历史上""从某种意义上说"',
@@ -271,16 +355,68 @@ input:focus-visible {
     '6. 段落间有过渡金句',
   ].join('\n');
 
-  /* 主体内容提示词：dimension=维度名, type=内容类型, platform=平台, title=标题 */
-  WJ.buildPrompt = function (dimension, type, platform, title) {
+  /* ---------- 可复用附加区块 ---------- */
+
+  /* 事实来源区块（长文/问答用） */
+  var SOURCES_BLOCK = [
+    '【事实来源与延伸阅读】（必须输出）',
+    '另起一部分，标题用【事实来源与延伸阅读】。',
+    '给出4-6条：与文中事实相关的可检索来源方向，如真实存在的经典著作、纪录片、博物馆、考古报告、公开讲座。',
+    '每条一行，格式：来源名——一句话说明它讲了什么、读者搜什么关键词能找到。',
+    '铁律：只写真实存在、可查证的来源；宁可少写一条，绝不编造书名、页码、链接。',
+  ].join('\n');
+
+  /* 话题词区块（社交/短视频平台用） */
+  function tagsBlock(platform) {
+    return [
+      '【话题词】（必须输出）',
+      '另起一部分，标题用【话题词】。',
+      '输出8-12个与本文内容强相关的' + platform + '真实话题：#开头，空格分隔成一行。',
+      '要求：必须包含具体事实词（如 #三星堆遗址 #吴哥窟），不要空泛的 #历史 #文化；',
+      '优先选择平台上真实存在流量的话题词，不确定流量就写内容本身的关键事实词。',
+    ].join('\n');
+  }
+
+  /* ---------- 主体内容提示词 ----------
+   * dimension: 维度名或自定义主题
+   * opts: { cta: 'interact', mystery: false }
+   */
+  WJ.buildPrompt = function (dimension, type, platform, title, opts) {
+    opts = opts || {};
+    var cta = opts.cta || 'interact';
     var isCiv = dimension.indexOf('文明') >= 0 || dimension.indexOf('帝国') >= 0 || dimension.indexOf('文化') >= 0;
     var subjectWord = isCiv ? '文明' : '领域';
+    var ctaLine = '【CTA要求】' + (WJ.CTA_INSTRUCTIONS[cta] || WJ.CTA_INSTRUCTIONS.interact);
+
+    /* 平台招牌字段（写进正文结构的开头/结尾） */
+    var platformOpen = [];
+    var platformTail = [];
+
+    if (platform === '公众号') {
+      platformOpen.push('第一行输出【摘要】（60-80字）：概括全文核心钩子，可直接填入公众号摘要栏，不要出现"本文"二字。');
+    }
+    if (platform === '知乎') {
+      platformOpen.push('第一行输出【问题】（15-30字）：把标题改写成知乎问题句式（以"为什么/如何/怎样/是什么体验"等问句形态），然后以回答体展开。');
+    }
+    if (platform === 'B站') {
+      platformTail.push('结尾输出【简介】（100字左右）：视频简介文案，含信息量与观看理由。');
+      platformTail.push('结尾输出【分P标题】（3-5个）：若做成系列分P，每个分P的标题，每行一个。');
+      platformTail.push(tagsBlock(platform));
+    }
+    if (platform === '小红书' || platform === '抖音' || platform === '快手' || platform === '视频号') {
+      platformTail.push(tagsBlock(platform));
+    }
+
+    var suffix = [];
+    suffix.push(ctaLine);
+    if (type === '深度长文' || type === '问答互动') suffix.push(SOURCES_BLOCK);
 
     switch (type) {
       case '深度长文':
         return [
           '【任务】以"' + title + '"为题，创作一篇关于"' + dimension + '"的深度长文，发布在' + platform + '。',
           BASE,
+          platformOpen.length ? '【平台开头要求】\n' + platformOpen.join('\n') : '',
           '【深度长文专属结构】（严格按此执行）',
           '第一段（200字）：震撼开场。一个颠覆认知的具体事实，带数字和细节。',
           '第二段（150字）：核心论点宣告。明确告诉读者你要说什么，观点要有锋芒。',
@@ -289,6 +425,7 @@ input:focus-visible {
           '第十一至十二段（600字）：当代连接。这个' + subjectWord + '对今天的我们有何启示？具体到一个现代场景。',
           '第十三段（400字）：升华。从更大视角（宇宙/文明/人类命运）收束全文。',
           '第十四段（200字）：互动结尾。向读者提出一个问题或发起一个行动号召。',
+          platformTail.length ? '【平台结尾要求】\n' + platformTail.join('\n') : '',
           '【结尾附加】',
           '另起一行，输出5-8条金句，每行一条，方便截图转发。',
           '【格式】',
@@ -296,11 +433,13 @@ input:focus-visible {
           '- 小标题用【】包裹',
           '- 重要句子用**加粗**',
           '- 字数3000字以上',
-        ].join('\n');
+          suffix.join('\n'),
+        ].filter(Boolean).join('\n');
 
       case '爆款文案':
         return [
           '【任务】以"' + title + '"为题，创作一篇关于"' + dimension + '"的爆款文案，发布在' + platform + '。',
+          platformOpen.length ? '【平台开头要求】\n' + platformOpen.join('\n') : '',
           '【爆款文案结构——严格按以下9个部分输出，每个部分用【】标记】',
           '【钩子】50字左右。一句话让人停不下来。反常识判断或震撼数据开头。只写1-2句。',
           '【痛点】100字左右。直接对话读者："你是不是也遇到过..." 描述一个具体场景，让读者觉得"说的就是我"。',
@@ -309,8 +448,9 @@ input:focus-visible {
           '【干货二】130字左右。第二个核心要点。同上格式，但角度要不同。',
           '【干货三】130字左右。第三个核心要点。同上格式。',
           '【高潮】200字左右。一个完整的小故事或场景描写。有开头、有转折、有情感冲击。引发强烈共鸣。',
-          '【号召】100字左右。告诉读者下一步做什么。"收藏这篇，慢慢看""转发给那个需要的人"。',
+          '【号召】100字左右。按下方CTA要求执行。',
           '【互动】50字左右。引导评论。"你觉得呢？评论区告诉你""你经历过类似的事吗？"',
+          platformTail.length ? '【平台结尾要求】\n' + platformTail.join('\n') : '',
           '【铁律——违反任何一条内容作废】',
           '1. 必须严格按【钩子】【痛点】【颠覆】【干货一】【干货二】【干货三】【高潮】【号召】【互动】9个部分输出',
           '2. 每部分开头必须带【】标记',
@@ -319,7 +459,8 @@ input:focus-visible {
           '5. 关键句用**加粗**',
           '6. 每个干货部分必须有：金句+解释+事实（带数字）',
           '7. 总字数800-1500字',
-        ].join('\n');
+          suffix.join('\n'),
+        ].filter(Boolean).join('\n');
 
       case '短视频脚本':
         return [
@@ -333,14 +474,16 @@ input:focus-visible {
           '[镜头2-3] 3-15秒：背景铺设。2-3个镜头快速交代' + dimension + '的核心背景。',
           '[镜头4-7] 15-45秒：核心内容。3-4个信息点，每个配具体画面。每点一个震惊事实。',
           '[镜头8] 45-55秒：高潮反转。颠覆认知的事实或情感高潮画面。',
-          '[镜头9] 55-60秒：结尾引导。关注+点赞+评论引导。',
+          '[镜头9] 55-60秒：结尾引导。按CTA要求执行。',
+          platformTail.length ? '【平台结尾要求】\n' + platformTail.join('\n') : '',
           '【格式要求】',
           '- 画面描述具体到可拍摄（景别+主体+动作）',
           '- 旁白口语化，像朋友聊天',
           '- 字幕每行不超过15字',
           '- 标注BGM建议（曲风+节奏）',
           '- 标注转场方式',
-        ].join('\n');
+          suffix.join('\n'),
+        ].filter(Boolean).join('\n');
 
       case '播客口播稿':
         return [
@@ -360,7 +503,8 @@ input:focus-visible {
           '[互动环节] 1-2分钟',
           '回应一个假设的听众提问，或发起一个讨论。',
           '[结尾] 1分钟',
-          '总结核心观点+下期预告+关注引导。',
+          '总结核心观点+下期预告+按CTA要求引导。',
+          platformTail.length ? '【平台结尾要求】\n' + platformTail.join('\n') : '',
           '【格式要求】',
           '- 高度口语化，像和朋友聊天',
           '- 标注语气：[停顿] [加重] [笑声] [叹气] [音效]',
@@ -368,7 +512,8 @@ input:focus-visible {
           '- 适当自嘲和幽默',
           '- 故事要有画面感（让听众"看到"场景）',
           '- 总字数2000-4000字',
-        ].join('\n');
+          suffix.join('\n'),
+        ].filter(Boolean).join('\n');
 
       case '朋友圈文案':
         return [
@@ -378,7 +523,7 @@ input:focus-visible {
           '【感悟】4-6行短句。一个有洞察力的观点。不是百度百科式的介绍，而是你自己的独特观察。必须用一个具体事实支撑（有数字、有名字或有时间）。让读者觉得"这个人确实思考过"。',
           '【金句】1行。一句话总结上面的感悟。这句话要值得截图发朋友圈。有哲理但不鸡汤。可以略带自嘲或反讽。',
           '【情绪】1-2行短句。情绪转折或轻松收尾。"不过也正因为这样，才觉得..."或"想想还挺...的"或一个emoji+简短感想。让整条文案有呼吸感。',
-          '【互动】1行。引导评论。"你怎么看？""有同感吗？""评论区聊聊""你也发现过吗？"',
+          '【互动】1行。按CTA要求执行。',
           '【铁律——违反任何一条内容作废】',
           '1. 必须严格按【场景】【感悟】【金句】【情绪】【互动】5个部分输出',
           '2. 每部分开头必须带【】标记',
@@ -388,12 +533,14 @@ input:focus-visible {
           '6. 不要emoji，纯文字更有质感',
           '7. 不像广告，像朋友聊天',
           '8. 总字数300-500字',
-        ].join('\n');
+          suffix.join('\n'),
+        ].filter(Boolean).join('\n');
 
       case '问答互动':
         return [
           '【任务】以"' + title + '"为题，创作一篇关于"' + dimension + '"的问答互动内容，发布在' + platform + '。',
           BASE,
+          platformOpen.length ? '【平台开头要求】\n' + platformOpen.join('\n') : '',
           '【问答互动专属结构】（严格按此执行）',
           '[引言] 200字',
           '用一个具体案例或数据说明：为什么这个问题值得讨论？',
@@ -408,27 +555,29 @@ input:focus-visible {
           '[深度分析] 600字',
           '对比各观点的优劣。承认不确定性。给出你自己的明确立场（不要模棱两可）。',
           '[互动设计] 200字',
-          '设计一个投票或选择题，引导读者参与讨论。',
+          '按CTA要求设计结尾互动。',
           '[延伸阅读] 100字',
           '推荐3-5个相关话题，引导读者继续探索。',
+          platformTail.length ? '【平台结尾要求】\n' + platformTail.join('\n') : '',
           '【格式要求】',
           '- 每个观点独立成段',
           '- 用【观点A】【观点B】等标注',
           '- 重要句子加粗',
           '- 结尾的互动设计要明确具体',
-        ].join('\n');
+          suffix.join('\n'),
+        ].filter(Boolean).join('\n');
 
       default:
-        return WJ.buildPrompt(dimension, '深度长文', platform, title);
+        return WJ.buildPrompt(dimension, '深度长文', platform, title, opts);
     }
   };
 
   /* 「换一篇」用的差异化提示词：在标准结构上叠加全新视角要求 */
-  WJ.buildRegenPrompt = function (dimension, type, platform, title) {
+  WJ.buildRegenPrompt = function (dimension, type, platform, title, opts) {
     return [
       '【任务】以"' + title + '"为题，创作一篇关于"' + dimension + '"的' + type + '，发布在' + platform + '。',
       '【重要】这篇内容必须从与常见角度完全不同的视角切入。如果常见写法是从历史角度介绍，你就从哲学/科学/个人体验/当代连接的角度写。如果常见写法是罗列事实，你就用故事叙事的方式写。',
-      WJ.buildPrompt(dimension, type, platform, title),
+      WJ.buildPrompt(dimension, type, platform, title, opts),
       '【额外要求】',
       '1. 用全新的事实和案例，不要重复常见的知识点',
       '2. 核心论点要有新意，不要陈词滥调',
@@ -436,12 +585,104 @@ input:focus-visible {
     ].join('\n');
   };
 
-  /* 爆款标题生成 */
+  /* ---------- [NEW-9] 改写模式提示词 ----------
+   * mode: 润色 | 精简 | 扩写 | 换平台
+   */
+  WJ.buildRewritePrompt = function (text, mode, platform, dimension) {
+    var modeSpec = {
+      '润色': [
+        '【改写类型：润色】',
+        '保持原文结构与信息量不变，逐段提升语言质感：',
+        '- 删除AI腔、套话、冗余形容词',
+        '- 长短句交错，重点句独立成段',
+        '- 保留原文所有事实、数字、观点，绝不增删事实',
+      ].join('\n'),
+      '精简': [
+        '【改写类型：精简】',
+        '保留核心论点、关键事实与金句，压缩到原文的40%-60%篇幅：',
+        '- 合并重复表述，砍掉铺垫',
+        '- 事实和数字一个都不能丢',
+      ].join('\n'),
+      '扩写': [
+        '【改写类型：扩写】',
+        '在保留原文全部内容与结构的基础上扩充至1.8-2.5倍篇幅：',
+        '- 为每个论点补充真实案例、数据、细节场景',
+        '- 新增内容必须遵守事实纪律，可加过渡金句',
+      ].join('\n'),
+      '换平台': [
+        '【改写类型：换平台】',
+        '把原文改写成完全适配' + platform + '的版本：',
+        '- 结构、语气、开头钩子按' + platform + '的内容习惯重排',
+        '- 保留原文核心观点与事实，表达方式全部本地化',
+      ].join('\n'),
+    }[mode] || '';
+
+    var platformTail = [];
+    if (mode === '换平台' || platform === '公众号') {
+      platformTail.push('第一行输出【摘要】（60-80字），可直接填入公众号摘要栏。');
+    }
+    if (platform === '知乎') {
+      platformTail.push('第一行输出【问题】（15-30字，问句形态）。');
+    }
+    if (platform === 'B站') {
+      platformTail.push('结尾输出【简介】（100字左右）与【分P标题】（3-5个，每行一个）。');
+    }
+    if (platform === '小红书' || platform === '抖音' || platform === '快手' || platform === '视频号' || platform === '朋友圈') {
+      platformTail.push('结尾输出【话题词】：8-12个真实相关话题，#开头，空格分隔成一行。');
+    }
+
+    return [
+      '【任务】改写下面这段已有文案' + (dimension ? '（主题：' + dimension + '）' : '') + '，发布在' + platform + '。',
+      modeSpec,
+      platformTail.length ? '【平台要求】\n' + platformTail.join('\n') : '',
+      '【原文】',
+      '<<<TEXT',
+      text,
+      'TEXT>>>',
+      '【格式】',
+      '- 直接输出改写后的完整内容，第一行就是正文（或【摘要】/【问题】行）',
+      '- 小标题用【】包裹，重要句子用**加粗**',
+      '- 禁止输出任何解释、对比说明或"改写如下"之类的话',
+    ].join('\n');
+  };
+
+  /* ---------- [NEW-9] 选题灵感提示词 ---------- */
+  WJ.buildIdeasPrompt = function (dimension) {
+    return [
+      '为"' + dimension + '"这个主题，给出8个当下最有爆款潜质的选题切口。',
+      '每个切口一行，严格用以下格式（竖线分隔，共4段）：',
+      '切口名称 | 一句话说清角度与钩子 | 推荐内容类型（从：深度长文/爆款文案/短视频脚本/播客口播稿/朋友圈文案/问答互动 中选） | 推荐平台（从：公众号/知乎/小红书/抖音/快手/视频号/B站/朋友圈/知识星球 中选1个）',
+      '',
+      '要求：',
+      '- 切口必须具体到可写，带冲突感或反常识（如"考古队最怕的不是挖不到，而是挖到了不敢公开的东西"这种级别）',
+      '- 8个切口角度互不重复：史实考据、争议话题、当代应用、个人体验、反常识科普、情感共鸣至少各占一类',
+      '- 涉及传说与假说的切口，在角度里注明"（传说口径）"',
+      '- 只输出8行，不要序号，不要解释',
+    ].join('\n');
+  };
+
+  /* ---------- [NEW-9] 系列大纲提示词 ---------- */
+  WJ.buildSeriesPrompt = function (dimension, count) {
+    return [
+      '为"' + dimension + '"这个主题设计一个' + count + '篇的连载系列大纲。',
+      '每篇一行，严格用以下格式（竖线分隔，共3段）：',
+      '第N篇标题 | 3个内容要点（用顿号分隔） | 篇间钩子（一句话，勾住读者看下一篇）',
+      '',
+      '要求：',
+      '- 系列要有递进结构：认知颠覆→深挖细节→争议碰撞→当代连接→行动启示（可调整但必须有推进感）',
+      '- 每篇标题独立成立，不看前文也想去点开，15-25字，禁用冒号',
+      '- 事实与传说口径按主题性质把握，传说类注明（传说口径）',
+      '- 只输出' + count + '行，不要解释',
+    ].join('\n');
+  };
+
+  /* ---------- 爆款标题生成（含真实性自检） ---------- */
   WJ.buildTitlePrompt = function (dimension, type) {
     return [
       '创作5个关于"' + dimension + '"的' + type + '标题。',
       '要求：让人有点开的冲动，15-25字，5个不同风格（悬念反转、认知颠覆、痛点共鸣、数字冲击、情绪引爆），只输出标题每行一个不要序号不要引号，用中文。',
-      '标题内部禁用冒号和书名号；数字必须来自真实可查证的事实，不得编造。',
+      '标题内部禁用冒号和书名号；数字必须来自真实可查证的事实，拿不准就改用概数（"近千年""几万吨"）或不用数字，绝不能编造。',
+      '输出前逐条自查：标题里的每个具体数字和事实是否真实可查证？不确定就改概数或换事实。',
       '示例好标题：',
       '玛雅人算出一年365天，误差17秒。但他们没算到自己的末日。',
       '金字塔不是坟墓。一位工程师发现了真正的用途。',
@@ -451,13 +692,16 @@ input:focus-visible {
 })(window.WJ = window.WJ || {});
 
 /* ==== utils.js ==== */
-/* 光体·文无界 — 工具层（额度 / 历史 / 导出）
+/* 光体·文无界 — 工具层（额度 / 历史 / 导出 / 内容体检）
  *
  * 相对原站修复：
- *  [BUG-10] 原站历史记录只存在 React state 里，刷新页面全部丢失，
- *           但界面却叫「生成历史」，属于实打实的数据丢失。这里持久化到 localStorage。
- *  [BUG-11] 原站额度初始值硬编码 useState(100)，刷新瞬间会闪一下 100 再跳到真实值。
- *           这里初始化即读本地真实值。
+ *  [BUG-10] 历史持久化
+ *  [BUG-11] 额度初始化读本地真实值
+ *
+ * 本次新增：
+ *  [NEW-12] 内容体检：字数/阅读时长/金句数/风险词检测
+ *  [NEW-13] 历史导出/导入 JSON（跨设备备份）
+ *  [NEW-14] 配图提示词生成（供即梦/Midjourney 出真实配图）
  */
 (function (WJ) {
   'use strict';
@@ -471,6 +715,7 @@ input:focus-visible {
   }
 
   WJ.quota = {
+    demo: true,   // [NEW-13] 纯前端计数，界面需标注"演示额度"
     limit: DAILY_LIMIT,
     get: function () {
       try {
@@ -531,6 +776,87 @@ input:focus-visible {
       WJ.history.save([]);
       return [];
     },
+    /* [NEW-13] 导出全部历史为 JSON 文件 */
+    exportJson: function () {
+      var data = JSON.stringify({ app: 'guangti-wenwujie', version: 2, items: WJ.history.load() }, null, 2);
+      var blob = new Blob([data], { type: 'application/json;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = '光体文无界_历史备份_' + today() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    },
+    /* [NEW-13] 从 JSON 文件导入历史（按 id 去重合并），返回新列表；失败返回 null */
+    importJsonText: function (text) {
+      try {
+        var o = JSON.parse(text);
+        var items = Array.isArray(o) ? o : (o && Array.isArray(o.items) ? o.items : null);
+        if (!items) return null;
+        var valid = items.filter(function (it) {
+          return it && typeof it.content === 'string' && typeof it.id !== 'undefined';
+        });
+        if (!valid.length) return null;
+        var exist = {};
+        WJ.history.load().forEach(function (h) { exist[h.id] = true; });
+        var merged = WJ.history.load();
+        valid.forEach(function (it) {
+          if (!exist[it.id]) { merged.push(it); exist[it.id] = true; }
+        });
+        merged.sort(function (a, b) { return String(b.id).localeCompare(String(a.id)); });
+        WJ.history.save(merged);
+        return merged;
+      } catch (e) {
+        return null;
+      }
+    },
+  };
+
+  /* ---------------- [NEW-12] 内容体检 ---------------- */
+  var RISK_WORDS = [
+    '根治', '治愈', '包治', '疗效', '彻底解决', '排毒', '清宿便',
+    '稳赚', '保本', '躺赚', '翻倍', '百分百', '100%', '保证收益',
+    '第一品牌', '国家级', '最高级', '绝无仅有', '万能', '包好',
+  ];
+
+  WJ.audit = function (content) {
+    var lines = String(content || '').split('\n');
+    var text = lines.join('');
+    var chars = text.replace(/\s/g, '').length;
+    var minutes = Math.max(1, Math.round(chars / 400)); // 中文阅读约 400 字/分钟
+
+    var golden = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var t = lines[i].trim();
+      // 独立成行的短句（≤30字、以句末标点收尾）视为金句
+      if (t.length >= 6 && t.length <= 30 && /[。！？…]$/.test(t) && t.indexOf('【') !== 0 && !/^[━═─-]+$/.test(t)) {
+        golden++;
+      }
+    }
+
+    var risks = [];
+    for (var j = 0; j < RISK_WORDS.length; j++) {
+      var w = RISK_WORDS[j];
+      var count = text.split(w).length - 1;
+      if (count > 0) risks.push({ word: w, count: count });
+    }
+
+    return { chars: chars, minutes: minutes, golden: golden, risks: risks };
+  };
+
+  /* ---------------- [NEW-14] 配图提示词 ---------------- */
+  /* 从正文中挑 3 个画面感强的句子，生成文生图提示词（供即梦/Midjourney使用） */
+  WJ.imagePrompts = function (content, dimension) {
+    var captions = WJ.pickImageCaptions ? WJ.pickImageCaptions(content) : [];
+    while (captions.length < 3) captions.push(dimension || '古老文明');
+    var style = '电影感构图，暖金色调，超高清细节，史诗氛围';
+    return captions.map(function (c, i) {
+      return '配图' + (i + 1) + '：' + c.substring(0, 24) + '…… → 提示词：' +
+        dimension + '，' + (i === 0 ? '宏伟全景' : (i === 1 ? '人物特写' : '细节纹样')) +
+        '，' + style;
+    });
   };
 
   /* ---------------- 下载 ---------------- */
@@ -621,14 +947,15 @@ input:focus-visible {
 /* 光体·文无界 — 模型接口层
  *
  * 相对原站修复：
- *  [BUG-1] max_tokens 从 4000 提到 16000。原站用 deepseek-v4-flash，这是推理模型，
- *          会先产出 reasoning_content 再产出 content，4000 token 里思考链就吃掉大半，
- *          导致正文被截断甚至 content 直接为空（实测 max_tokens=20 时 content 为 ""）。
- *  [BUG-2] 新增 finish_reason==='length' 截断检测，明确告诉用户内容被截断。
- *  [BUG-3] 新增超时控制（默认 180s）与 AbortController，避免请求挂死界面卡在「生成中」。
- *  [BUG-4] 新增针对推理模型 content 为空的自动重试（降低 temperature 再试一次）。
- *  [BUG-5] 错误按状态码分类，给出可操作的中文提示，而不是抛一句英文 API 报错。
- *  [BUG-6] API Key 不再写死成常量，改为可在「设置」中替换并持久化（仍提醒前端暴露风险）。
+ *  [BUG-1] max_tokens 从 4000 提到 16000（推理模型的思考链开销）
+ *  [BUG-2] finish_reason==='length' 截断检测
+ *  [BUG-3] 超时控制与 AbortController
+ *  [BUG-4] 推理模型 content 为空的自动重试
+ *  [BUG-5] 错误按状态码分类，给可操作的中文提示
+ *  [BUG-6] API Key 可在「设置」中替换并持久化
+ *
+ * 本次新增：
+ *  [NEW-11] 流式输出（SSE），生成过程中实时回显；流式失败自动降级为普通请求
  */
 (function (WJ) {
   'use strict';
@@ -685,13 +1012,17 @@ input:focus-visible {
     return '接口返回错误（' + status + '）：' + String(body || '').slice(0, 200);
   }
 
-  /**
-   * 调用模型
-   * @param {Array}  messages    消息数组
-   * @param {Number} temperature 温度
-   * @param {Number} maxTokens   最大输出 token
-   * @returns {Promise<{content:String, truncated:Boolean}>}
-   */
+  function buildBody(messages, temperature, maxTokens, stream) {
+    return JSON.stringify({
+      model: WJ.getConfig().model,
+      messages: messages,
+      temperature: temperature,
+      max_tokens: maxTokens,
+      stream: !!stream,
+    });
+  }
+
+  /* ---------------- 普通请求 ---------------- */
   WJ.callModel = function (messages, temperature, maxTokens) {
     var cfg = WJ.getConfig();
     var controller = new AbortController();
@@ -703,12 +1034,7 @@ input:focus-visible {
         'Content-Type': 'application/json',
         Authorization: 'Bearer ' + cfg.apiKey,
       },
-      body: JSON.stringify({
-        model: cfg.model,
-        messages: messages,
-        temperature: temperature,
-        max_tokens: maxTokens,
-      }),
+      body: buildBody(messages, temperature, maxTokens, false),
       signal: controller.signal,
     }).then(function (res) {
       return res.text().then(function (text) {
@@ -718,7 +1044,6 @@ input:focus-visible {
         var choice = (data.choices || [])[0] || {};
         var msg = choice.message || {};
         return {
-          // 推理模型可能把正文放在 content，也可能只有 reasoning_content
           content: (msg.content || '').trim(),
           reasoning: (msg.reasoning_content || '').trim(),
           truncated: choice.finish_reason === 'length',
@@ -736,11 +1061,106 @@ input:focus-visible {
     });
   };
 
-  /**
-   * 生成正文。带一次「推理模型空内容」重试。
+  /* ---------------- [NEW-11] 流式请求 ----------------
+   * 返回 {content, truncated}；onDelta(accumulatedText) 在每个增量后回调。
+   * 流式不受 180s 超时打断（有增量就活着），仅 60s 无增量判超时。
    */
-  WJ.generateContent = function (messages, temperature, maxTokens) {
-    return WJ.callModel(messages, temperature, maxTokens).then(function (r) {
+  WJ.callModelStream = function (messages, temperature, maxTokens, onDelta) {
+    var cfg = WJ.getConfig();
+    var controller = new AbortController();
+    var lastActivity = Date.now();
+    var watchdog = setInterval(function () {
+      if (Date.now() - lastActivity > 60000) {
+        controller.abort();
+      }
+    }, 5000);
+
+    function cleanup() { clearInterval(watchdog); }
+
+    return fetch(cfg.baseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + cfg.apiKey,
+      },
+      body: buildBody(messages, temperature, maxTokens, true),
+      signal: controller.signal,
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (text) {
+          throw new Error(friendlyError(res.status, text));
+        });
+      }
+      if (!res.body || !res.body.getReader) {
+        // 环境不支持流式，调用方会降级
+        var noStream = new Error('NO_STREAM_SUPPORT');
+        noStream.code = 'NO_STREAM_SUPPORT';
+        throw noStream;
+      }
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder('utf-8');
+      var buf = '';
+      var full = '';
+      var truncated = false;
+
+      function pump() {
+        return reader.read().then(function (chunk) {
+          lastActivity = Date.now();
+          if (chunk.done) {
+            cleanup();
+            return { content: full.trim(), truncated: truncated };
+          }
+          buf += decoder.decode(chunk.value, { stream: true });
+          var lines = buf.split('\n');
+          buf = lines.pop(); // 最后一段可能不完整，留在缓冲
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line || line.indexOf('data:') !== 0) continue;
+            var payload = line.slice(5).trim();
+            if (payload === '[DONE]') continue;
+            try {
+              var j = JSON.parse(payload);
+              var ch = (j.choices || [])[0] || {};
+              var piece = (ch.delta && ch.delta.content) || '';
+              if (piece) {
+                full += piece;
+                if (onDelta) { try { onDelta(full); } catch (e) { /* 回调异常不影响流 */ } }
+              }
+              if (ch.finish_reason === 'length') truncated = true;
+            } catch (e) { /* 单片解析失败忽略 */ }
+          }
+          return pump();
+        });
+      }
+
+      return pump();
+    }).catch(function (err) {
+      cleanup();
+      if (err && err.code === 'NO_STREAM_SUPPORT') throw err;
+      if (err.name === 'AbortError') {
+        var t = new Error('流式请求超时（60秒无增量）。请重试。');
+        throw t;
+      }
+      throw err;
+    });
+  };
+
+  /**
+   * 生成正文：优先流式（onDelta 实时回显），失败降级为普通请求，
+   * 并带一次「推理模型空内容」重试。
+   */
+  WJ.generateContent = function (messages, temperature, maxTokens, onDelta) {
+    function nonStreamFallback() {
+      return WJ.callModel(messages, temperature, maxTokens).then(function (r) {
+        if (r.content && onDelta) { try { onDelta(r.content); } catch (e) { /* ignore */ } }
+        return r;
+      });
+    }
+
+    return WJ.callModelStream(messages, temperature, maxTokens, onDelta).catch(function (err) {
+      // 流式不支持 / 偶发失败 → 降级普通请求
+      return nonStreamFallback();
+    }).then(function (r) {
       if (r.content && r.content.length >= 50) {
         return { content: r.content, truncated: r.truncated };
       }
@@ -752,6 +1172,7 @@ input:focus-visible {
           }
           throw new Error('模型返回内容为空，请重试。');
         }
+        if (onDelta) { try { onDelta(r2.content); } catch (e) { /* ignore */ } }
         return { content: r2.content, truncated: r2.truncated };
       });
     });
@@ -1060,11 +1481,13 @@ input:focus-visible {
 /* 光体·文无界 — 平台排版渲染
  *
  * 相对原站修复：
- *  [BUG-8] 原站只实现了 5 个平台（公众号/小红书/知乎/朋友圈/知识星球）的模板，
- *          抖音、快手、视频号、B站 会全部落进最后的 else 分支，被渲染成「知识星球」的样子。
- *          这里补齐 4 套模板，并加通用兜底。
- *  [BUG-9] 原站把模型输出直接拼进 HTML 再 innerHTML 渲染，模型若返回 <script>/<img onerror>
- *          就会被执行（XSS）。这里先做 HTML 转义，再处理【】与 ** 标记。
+ *  [BUG-8] 补齐 4 套缺失平台模板（抖音/快手/视频号/B站）
+ *  [BUG-9] innerHTML XSS 转义
+ *
+ * 本次新增：
+ *  [NEW-15] parseContent：从正文中解析平台招牌字段（摘要/问题/简介/分P/话题词/事实来源），
+ *           公众号渲染摘要框、知乎渲染问题体、B站渲染简介+分P、各平台渲染真实话题词
+ *  [NEW-16] 事实来源渲染为独立引用框
  */
 (function (WJ) {
   'use strict';
@@ -1101,6 +1524,134 @@ input:focus-visible {
   function logoImg(size, extra) {
     return '<img src="' + (WJ.LOGO_SRC || '') + '" style="width:' + size + 'px;height:' + size +
       'px;object-fit:contain;display:block;flex:none;' + (extra || '') + '" alt="光体•文无界" />';
+  }
+
+  /* ---------- [NEW-15] 内容解析 ----------
+   * 把模型输出拆成：标题 / 摘要 / 问题 / 简介 / 分P / 话题词 / 事实来源 / 正文段落
+   */
+  WJ.parseContent = function (content) {
+    var lines = String(content || '').split('\n');
+    var out = {
+      title: '',
+      summary: '',      // 【摘要】
+      question: '',     // 【问题】
+      intro: '',        // 【简介】
+      episodes: [],     // 【分P标题】
+      tags: [],         // 【话题词】
+      sources: [],      // 【事实来源与延伸阅读】下的条目
+      paras: [],        // 其余正文
+    };
+
+    var section = '';          // 'summary' | 'question' | 'intro' | 'episodes' | 'tags' | 'sources' | ''
+    var firstMeaningful = true;
+
+    for (var i = 0; i < lines.length; i++) {
+      var raw = lines[i].trim();
+      if (!raw) { section = ''; continue; }  // 空行结束当前区块，回到正文
+      if (isDivider(raw)) { if (section) continue; out.paras.push(raw); continue; }
+
+      // 第一行（无论是否带【】）都是标题
+      if (firstMeaningful) {
+        out.title = raw.replace(/[【】]/g, '').trim();
+        firstMeaningful = false;
+        continue;
+      }
+
+      if (raw.indexOf('【') === 0) {
+        // 【区块名】或【区块名】内容 —— 前缀匹配区块名
+        var nm = raw.match(/^【([^】]{1,14})】/);
+        var secName = nm ? nm[1] : '';
+        var known = {
+          '摘要': 'summary', '问题': 'question', '简介': 'intro',
+          '分P标题': 'episodes', '分P': 'episodes',
+          '话题词': 'tags', '话题标签': 'tags',
+          '事实来源与延伸阅读': 'sources', '事实来源': 'sources',
+        };
+        if (known[secName]) {
+          section = known[secName];
+          firstMeaningful = false;
+          // 【区块名】后同行还有内容 → 立即按该区块处理
+          var rest = raw.slice(nm[0].length).trim();
+          if (rest) {
+            switch (section) {
+              case 'summary': out.summary = out.summary ? out.summary + rest : rest; break;
+              case 'question': out.question += rest; break;
+              case 'intro': out.intro = out.intro ? out.intro + rest : rest; break;
+              case 'episodes': rest = rest.replace(/^[-*\d.、]+\s*/, ''); if (rest) out.episodes.push(rest); break;
+              case 'tags': out.tags = out.tags.concat(rest.split(/[\s#]+/).filter(function (t) { return t && t.length >= 2; })); break;
+              case 'sources': rest = rest.replace(/^[-*\d.、]+\s*/, ''); if (rest) out.sources.push(rest); break;
+            }
+          }
+          continue;
+        }
+        // 其它小标题：回到正文
+        section = '';
+        out.paras.push(raw);
+        continue;
+      }
+
+      switch (section) {
+        case 'summary':
+          out.summary += (out.summary ? '' : '') + raw;
+          break;
+        case 'question':
+          out.question += raw;
+          break;
+        case 'intro':
+          out.intro += (out.intro ? '' : '') + raw;
+          break;
+        case 'episodes':
+          if (/^[-*\d.、]+\s*/.test(raw)) raw = raw.replace(/^[-*\d.、]+\s*/, '');
+          if (raw) out.episodes.push(raw);
+          break;
+        case 'tags':
+          if (raw) out.tags = out.tags.concat(raw.split(/[\s#]+/).filter(function (t) { return t && t.length >= 2; }));
+          break;
+        case 'sources':
+          if (/^[-*\d.、]+\s*/.test(raw)) raw = raw.replace(/^[-*\d.、]+\s*/, '');
+          if (raw) out.sources.push(raw);
+          break;
+        default:
+          out.paras.push(raw);
+      }
+    }
+    if (out.tags.length > 12) out.tags = out.tags.slice(0, 12);
+    return out;
+  };
+
+  /* 摘要框（公众号） */
+  function summaryBox(text) {
+    if (!text) return '';
+    return '<div style="margin:0 0 14px;padding:10px 14px;background:#faf7f2;border-left:3px solid #c9a96e;border-radius:0 8px 8px 0;font-size:13px;color:#6a5d4d;line-height:1.7;">' +
+      '<span style="font-weight:700;color:#8a6a3a;">摘要 · </span>' + esc(text) + '</div>';
+  }
+
+  /* 问题体头部（知乎） */
+  function questionBox(text) {
+    if (!text) return '';
+    return '<div style="margin:0 0 12px;padding:10px 14px;background:#f6f7fb;border-left:3px solid #4a6fa5;border-radius:0 8px 8px 0;">' +
+      '<span style="font-size:12px;color:#8590a6;">问题</span>' +
+      '<div style="font-size:16px;font-weight:700;color:#1a1a1a;line-height:1.5;margin-top:2px;">' + esc(text) + '</div></div>';
+  }
+
+  /* 话题词行 */
+  function tagsRow(tags, color) {
+    if (!tags || !tags.length) return '';
+    return '<div style="margin-top:10px;font-size:12px;font-weight:600;line-height:1.8;">' +
+      tags.map(function (t) { return '<span style="color:' + (color || '#c9a96e') + '">#' + esc(t) + '</span>'; }).join(' ') +
+      '</div>';
+  }
+
+  /* 事实来源引用框 */
+  function sourcesBox(sources) {
+    if (!sources || !sources.length) return '';
+    var h = '<div style="margin-top:20px;padding:12px 14px;background:#f8f5ef;border:1px dashed #d4c8b0;border-radius:8px;">';
+    h += '<div style="font-size:12px;font-weight:700;color:#8a6a3a;margin-bottom:6px;">📚 事实来源与延伸阅读</div>';
+    for (var i = 0; i < sources.length; i++) {
+      h += '<div style="font-size:12px;color:#6a5d4d;line-height:1.7;margin:3px 0;">· ' + esc(sources[i]) + '</div>';
+    }
+    h += '</div>';
+    return h;
   }
 
   /**
@@ -1142,12 +1693,14 @@ input:focus-visible {
     var h = '<div style="max-width:677px;margin:0 auto;background:#fff;padding:24px 20px;">';
     h += img(ctx.cover, 240);
     h += '<h1 style="font-size:22px;color:#2e2418;font-weight:700;margin:4px 0 8px;line-height:1.4;letter-spacing:.3px;">' + esc(ctx.title) + '</h1>';
-    h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:20px;">' + logoImg(18) +
+    h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;">' + logoImg(18) +
       '<span style="font-size:12px;color:#a08858;font-weight:600;">光体•文无界</span>' +
       '<span style="font-size:12px;color:#bbb;">· ' + esc(ctx.date) + '</span></div>';
-    h += body(ctx.paras, ctx.inline, 3,
+    h += summaryBox(ctx.parsed.summary);
+    h += body(ctx.parsed.paras, ctx.inline, 3,
       { tag: 2, css: 'font-size:17px;color:#2e2418;font-weight:700;margin:22px 0 10px;padding-left:10px;border-left:3px solid #c9a96e;line-height:1.4;' },
       'font-size:15px;color:#333;line-height:1.85;margin:0 0 14px;text-align:justify;letter-spacing:.3px;');
+    h += sourcesBox(ctx.parsed.sources);
     h += '<div style="margin-top:24px;padding-top:14px;border-top:1px solid #eee;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:#999;">' +
       logoImg(16, 'border-radius:50%;') + '光体•文无界 · 探索无限</div>';
     return h + '</div>';
@@ -1157,10 +1710,10 @@ input:focus-visible {
     var h = '<div style="background:linear-gradient(135deg,#faf6f0,#f5efe6);border-radius:12px;padding:16px;">';
     h += img(ctx.cover, 180);
     h += '<h1 style="font-size:18px;color:#4a3a2a;font-weight:700;margin:0 0 12px;line-height:1.5;letter-spacing:.3px;">' + esc(ctx.title) + '</h1>';
-    h += body(ctx.paras, ctx.inline, 2,
+    h += body(ctx.parsed.paras, ctx.inline, 2,
       { tag: 3, css: 'font-size:15px;color:#c9a96e;font-weight:700;margin:12px 0 6px;' },
       'font-size:14px;color:#5a4d3f;line-height:1.85;margin:0 0 10px;letter-spacing:.3px;');
-    h += '<div style="margin-top:12px;font-size:12px;color:#c9a96e;font-weight:600;">#' + esc(ctx.dimension) + ' #' + esc(ctx.type) + ' #光体文无界</div>';
+    h += tagsRow(ctx.parsed.tags.length ? ctx.parsed.tags : [ctx.dimension, ctx.type, '光体文无界'], '#c9a96e');
     h += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #d4c8b8;font-size:11px;color:#a09080;text-align:center;">✨ 收藏关注</div>';
     return h + '</div>';
   };
@@ -1168,13 +1721,15 @@ input:focus-visible {
   TEMPLATES['知乎'] = function (ctx) {
     var h = '<div style="padding:16px;">';
     h += img(ctx.cover, 200);
+    h += questionBox(ctx.parsed.question);
     h += '<h1 style="font-size:22px;color:#121212;font-weight:700;margin:0 0 10px;">' + esc(ctx.title) + '</h1>';
     h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #f0f0f0;">' +
       logoImg(24, 'border-radius:50%;') +
       '<span style="font-size:12px;color:#8590a6;">光体•文无界</span></div>';
-    h += body(ctx.paras, ctx.inline, 3,
+    h += body(ctx.parsed.paras, ctx.inline, 3,
       { tag: 3, css: 'font-size:16px;color:#121212;font-weight:700;margin:14px 0 8px;padding-left:8px;border-left:3px solid #c9a96e;' },
       'font-size:15px;color:#444;line-height:1.8;margin:0 0 10px;text-align:justify;');
+    h += sourcesBox(ctx.parsed.sources);
     h += '<div style="margin-top:14px;padding:10px;background:#faf8f5;border-radius:6px;font-size:12px;color:#8590a6;text-align:center;">☕ 阅读愉快</div>';
     return h + '</div>';
   };
@@ -1190,8 +1745,8 @@ input:focus-visible {
       img(ctx.cover, 140) +
       '<div style="padding:8px 10px;font-size:11px;color:#888;">光体•文无界 · ' + esc(ctx.type) + '</div></div>';
     var n = 0;
-    for (var i = 0; i < ctx.paras.length; i++) {
-      var raw = ctx.paras[i].trim();
+    for (var i = 0; i < ctx.parsed.paras.length; i++) {
+      var raw = ctx.parsed.paras[i].trim();
       if (!raw || isDivider(raw)) continue;
       h += '<p style="font-size:14px;color:#333;line-height:1.6;margin:0 0 6px;">' +
         stripMarks(bold(esc(raw))) + '</p>';
@@ -1201,6 +1756,7 @@ input:focus-visible {
         break;
       }
     }
+    h += tagsRow(ctx.parsed.tags, '#576b95');
     h += '<div style="margin-top:8px;font-size:11px;color:#b2b2b2;">👍 💬</div>';
     return h + '</div>';
   };
@@ -1211,9 +1767,10 @@ input:focus-visible {
       '<span style="background:#c9a96e;color:#fff;font-size:10px;padding:2px 8px;border-radius:3px;font-weight:600;">精选</span>' +
       '<span style="font-size:12px;color:#8a8a8a;">' + esc(ctx.title) + '</span></div>';
     h += img(ctx.cover, 160);
-    h += body(ctx.paras, ctx.inline, 3,
+    h += body(ctx.parsed.paras, ctx.inline, 3,
       { tag: 3, css: 'font-size:15px;color:#3a2e22;font-weight:700;margin:14px 0 6px;' },
       'font-size:14px;color:#444;line-height:1.7;margin:0 0 8px;text-align:justify;');
+    h += sourcesBox(ctx.parsed.sources);
     h += '<div style="margin-top:12px;text-align:center;font-size:11px;color:#aaa;">💎 星球专享</div>';
     return h + '</div>';
   };
@@ -1230,14 +1787,14 @@ input:focus-visible {
     h += '<div style="padding:12px 14px 16px;">';
     h += '<div style="font-size:13px;font-weight:700;line-height:1.5;margin-bottom:6px;">' + esc(ctx.title) + '</div>';
     var n = 0;
-    for (var i = 0; i < ctx.paras.length && n < 4; i++) {
-      var raw = ctx.paras[i].trim();
+    for (var i = 0; i < ctx.parsed.paras.length && n < 4; i++) {
+      var raw = ctx.parsed.paras[i].trim();
       if (!raw || isDivider(raw)) continue;
       h += '<div style="font-size:12px;line-height:1.7;opacity:.92;margin:0 0 4px;">' +
         stripMarks(bold(esc(raw))) + '</div>';
       n++;
     }
-    h += '<div style="margin-top:8px;font-size:12px;color:' + accent + ';font-weight:600;">#' + esc(ctx.dimension) + ' #' + esc(ctx.type) + ' #光体文无界</div>';
+    h += tagsRow(ctx.parsed.tags.length ? ctx.parsed.tags : [ctx.dimension, ctx.type, '光体文无界'], accent);
     h += '<div style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;opacity:.75;">' +
       logoImg(20, 'border-radius:50%;') + '光体•文无界</div>';
     h += '</div></div>';
@@ -1262,12 +1819,13 @@ input:focus-visible {
       '<span style="margin-left:auto;font-size:11px;color:#fff;background:#07c160;padding:2px 8px;border-radius:3px;">关注</span></div>';
     h += '<div style="font-size:14px;font-weight:700;color:#191919;line-height:1.5;margin-bottom:6px;">' + esc(ctx.title) + '</div>';
     var n = 0;
-    for (var i = 0; i < ctx.paras.length && n < 5; i++) {
-      var raw = ctx.paras[i].trim();
+    for (var i = 0; i < ctx.parsed.paras.length && n < 5; i++) {
+      var raw = ctx.parsed.paras[i].trim();
       if (!raw || isDivider(raw)) continue;
       h += '<p style="font-size:13px;color:#333;line-height:1.7;margin:0 0 5px;">' + stripMarks(bold(esc(raw))) + '</p>';
       n++;
     }
+    h += tagsRow(ctx.parsed.tags, '#576b95');
     h += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0;display:flex;gap:18px;font-size:11px;color:#8a8a8a;">' +
       '<span>♡ 赞</span><span>💬 评论</span><span>↗ 转发</span><span>⭐ 收藏</span></div>';
     h += '</div></div>';
@@ -1286,16 +1844,28 @@ input:focus-visible {
       logoImg(26, 'border-radius:50%;') +
       '<span style="font-size:12px;color:#fb7299;font-weight:600;">光体•文无界</span>' +
       '<span style="font-size:11px;color:#9499a0;">· UP主</span></div>';
+    if (ctx.parsed.intro) {
+      h += '<div style="background:#f6f7f8;border-radius:6px;padding:10px 12px;margin-bottom:10px;">' +
+        '<div style="font-size:11px;color:#9499a0;margin-bottom:4px;">简介</div>' +
+        '<div style="font-size:13px;color:#61666d;line-height:1.7;">' + esc(ctx.parsed.intro) + '</div></div>';
+    }
+    if (ctx.parsed.episodes.length) {
+      h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
+      for (var e = 0; e < ctx.parsed.episodes.length; e++) {
+        h += '<span style="background:#fff0f4;color:#fb7299;border:1px solid #ffd9e4;font-size:11px;padding:3px 8px;border-radius:999px;">P' + (e + 1) + ' ' + esc(ctx.parsed.episodes[e]) + '</span>';
+      }
+      h += '</div>';
+    }
     h += '<div style="background:#f6f7f8;border-radius:6px;padding:10px 12px;">';
     var n = 0;
-    for (var i = 0; i < ctx.paras.length && n < 6; i++) {
-      var raw = ctx.paras[i].trim();
+    for (var i = 0; i < ctx.parsed.paras.length && n < 6; i++) {
+      var raw = ctx.parsed.paras[i].trim();
       if (!raw || isDivider(raw)) continue;
       h += '<p style="font-size:13px;color:#61666d;line-height:1.7;margin:0 0 5px;">' + stripMarks(bold(esc(raw))) + '</p>';
       n++;
     }
     h += '</div>';
-    h += '<div style="margin-top:10px;font-size:11px;color:#fb7299;">#光体文无界 #' + esc(ctx.dimension) + '</div>';
+    h += tagsRow(ctx.parsed.tags.length ? ctx.parsed.tags : ['光体文无界', ctx.dimension], '#fb7299');
     h += '</div></div>';
     return h;
   };
@@ -1305,20 +1875,20 @@ input:focus-visible {
     var h = '<div style="padding:16px;">';
     h += img(ctx.cover, 200);
     h += '<h1 style="font-size:20px;color:#3a2e22;font-weight:700;margin:0 0 10px;">' + esc(ctx.title) + '</h1>';
-    h += body(ctx.paras, ctx.inline, 3,
+    h += body(ctx.parsed.paras, ctx.inline, 3,
       { tag: 3, css: 'font-size:15px;color:#3a2e22;font-weight:700;margin:14px 0 6px;' },
       'font-size:14px;color:#444;line-height:1.8;margin:0 0 8px;text-align:justify;');
+    h += tagsRow(ctx.parsed.tags);
+    h += sourcesBox(ctx.parsed.sources);
     return h + '</div>';
   }
 
-  /** 渲染成平台化的 HTML */
+  /** 渲染成平台化的 HTML（自动解析招牌字段） */
   WJ.renderPlatform = function (content, platform, dimension, type, cover, inline) {
-    var all = String(content || '').split('\n');
-    var title = (all[0] || '').replace(/[【】]/g, '').trim();
-    var paras = all.slice(1);
+    var parsed = WJ.parseContent(content);
     var ctx = {
-      title: title,
-      paras: paras,
+      title: parsed.title,
+      parsed: parsed,
       cover: cover,
       inline: inline || [],
       dimension: dimension || '',
@@ -1339,6 +1909,21 @@ input:focus-visible {
       var t = line.trim();
       if (!t) return '<br>';
       if (isDivider(t)) return '<hr style="border:none;border-top:1px solid #ddd;margin:14px 0;">';
+      if (t.indexOf('【摘要】') === 0) {
+        return '<div style="margin:12px 0;padding:10px 14px;background:#faf7f2;border-left:3px solid #c9a96e;border-radius:0 8px 8px 0;font-size:13px;color:#6a5d4d;line-height:1.7;"><b style="color:#8a6a3a;">摘要 · </b>' +
+          esc(stripMarks(t).replace(/^摘要/, '').trim()) + '</div>';
+      }
+      if (t.indexOf('【问题】') === 0) {
+        return '<div style="margin:12px 0;padding:10px 14px;background:#f6f7fb;border-left:3px solid #4a6fa5;border-radius:0 8px 8px 0;"><span style="font-size:12px;color:#8590a6;">问题</span><div style="font-size:15px;font-weight:700;color:#1a1a1a;">' +
+          esc(stripMarks(t).replace(/^问题/, '').trim()) + '</div></div>';
+      }
+      if (t.indexOf('【话题词】') === 0 || t.indexOf('【话题标签】') === 0) {
+        return '<div style="margin:12px 0;font-size:12px;font-weight:600;color:#c9a96e;">' +
+          esc(stripMarks(t).replace(/^话题词|^话题标签/, '').trim().split(/[\s#]+/).filter(Boolean).map(function (x) { return '#' + x; }).join(' ')) + '</div>';
+      }
+      if (t.indexOf('【事实来源') === 0) {
+        return '<div style="margin:16px 0 6px;font-size:13px;font-weight:700;color:#8a6a3a;">📚 事实来源与延伸阅读</div>';
+      }
       if (t.indexOf('【') === 0 && t.lastIndexOf('】') === t.length - 1) {
         return '<h2 style="font-size:1.2em;font-weight:700;color:#2e2418;margin:20px 0 10px;padding-left:10px;border-left:3px solid #c9a96e;line-height:1.4;">' + esc(stripMarks(t)) + '</h2>';
       }
@@ -1359,7 +1944,18 @@ input:focus-visible {
 
 /* ==== app.js ==== */
 /* 光体·文无界 — 主应用
- * 迁移自 https://llwtsscpjckdm.ok.kimi.link/（原「光体AI内容生成系统」）
+ * 迁移自原站，并按专业审计全面升级：
+ *  [NEW-17] 创作/改写双模式（润色/精简/扩写/换平台）
+ *  [NEW-18] 自定义主题输入（维度 / 维度+主题 / 纯主题 三种来源）
+ *  [NEW-19] CTA 转化目标选择
+ *  [NEW-20] 选题灵感（8 个切口+推荐类型/平台）
+ *  [NEW-21] 系列大纲（连载规划）
+ *  [NEW-22] 内容体检（字数/阅读时长/金句/风险词）
+ *  [NEW-23] 传说维度免责卡 + 敏感行业合规清单
+ *  [NEW-24] 流式生成实时回显
+ *  [NEW-25] 历史导出/导入
+ *  [NEW-26] 配图提示词（供文生图工具出真实配图）
+ *  [NEW-27] 额度标注为演示额度
  */
 (function (WJ) {
   'use strict';
@@ -1383,19 +1979,31 @@ input:focus-visible {
     fileText: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h8"/><path d="M8 17h8"/></svg>',
     alert: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>',
     checkBig: '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
+    bulb: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>',
+    list: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></svg>',
+    upload: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>',
+    pen: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>',
     logo: '<img src="' + WJ.LOGO_SRC + '" style="width:100%;height:100%;object-fit:contain;display:block;" alt="" />'
   };
 
   /* ==================== 状态 ==================== */
   var S = {
+    workMode: 'create',     // create | rewrite
     mode: 'civilization',   // civilization | industry
     dimension: '',
+    topicMode: 'dimension', // dimension | blend | custom
+    customTopic: '',
+    cta: 'interact',
     type: '深度长文',
     platform: '公众号',
+    rewriteText: '',
+    rewriteMode: '润色',
     content: '',
+    streamText: '',
     titles: [],
     title: '',
     loading: false,
+    loadLabel: '',
     error: '',
     historyOpen: false,
     history: [],
@@ -1405,10 +2013,47 @@ input:focus-visible {
     quota: WJ.quota.get(),
     published: {},          // platform -> true
     preview: null,          // { platform, content, dimension, type }
+    ideas: [],
+    ideasOpen: false,
+    ideasLoading: false,
+    series: [],
+    seriesOpen: false,
+    seriesLoading: false,
+    riskOpen: false,
+    imgPromptsOpen: false,
   };
 
   var $ = function (id) { return document.getElementById(id); };
   var esc = WJ.escapeHtml;
+
+  /* ==================== 维度/主题辅助 ==================== */
+  /* 返回 {promptDim, label, mystery, sensitive} */
+  function effectiveDim() {
+    var d = S.dimension;
+    var topic = (S.customTopic || '').trim();
+    if (S.topicMode === 'custom' || (!d && topic)) {
+      return {
+        promptDim: topic,
+        label: topic.length > 14 ? topic.substring(0, 14) + '..' : topic,
+        mystery: false,
+        sensitive: false,
+      };
+    }
+    if (S.topicMode === 'blend' && topic) {
+      return {
+        promptDim: d + '（结合：' + topic + '）',
+        label: d + ' × 主题',
+        mystery: WJ.dimensionTag(d) === 'mystery',
+        sensitive: WJ.isSensitive(d),
+      };
+    }
+    return {
+      promptDim: d,
+      label: d,
+      mystery: d ? WJ.dimensionTag(d) === 'mystery' : false,
+      sensitive: d ? WJ.isSensitive(d) : false,
+    };
+  }
 
   /* ==================== 主渲染 ==================== */
   function render() {
@@ -1440,63 +2085,26 @@ input:focus-visible {
       '<main class="main-container">' +
         (S.historyOpen ? historyHtml() : '') +
         '<div class="panel-card">' +
-          '<div style="display:flex;flex-direction:column;align-items:center;margin-bottom:24px;">' +
+
+          /* ---------- 创作 / 改写 切换 ---------- */
+          '<div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px;">' +
+            '<button class="pill-toggle ' + (S.workMode === 'create' ? 'active' : '') + '" data-workmode="create">' + I.pen + ' 从零创作</button>' +
+            '<button class="pill-toggle ' + (S.workMode === 'rewrite' ? 'active' : '') + '" data-workmode="rewrite">改写润色</button>' +
+          '</div>' +
+
+          (S.workMode === 'create' ? createFormHtml(list) : rewriteFormHtml()) +
+
+          '<div style="display:flex;flex-direction:column;align-items:center;margin-top:24px;margin-bottom:8px;">' +
             '<button id="btn-generate" class="btn-generate"' + (S.loading ? ' disabled' : '') + '>' +
-              (S.loading ? '<span class="spinner"></span>生成中...' : I.spark + '一键生成') +
+              (S.loading
+                ? '<span class="spinner"></span>' + esc(S.loadLabel || '生成中...')
+                : (S.workMode === 'create' ? I.spark + '一键生成' : I.pen + '开始改写')) +
             '</button>' +
-            '<p class="hint-text">' +
+            '<p class="hint-text" style="font-size:11px;">' +
               (q.remaining > 0
-                ? '今日剩余额度 <b style="color:#b08a4a">' + q.remaining + '</b>/' + q.limit
-                : '<span style="color:#c86464">今日额度已用完，请明日继续</span>') +
+                ? '今日剩余额度 <b style="color:#b08a4a">' + q.remaining + '</b>/' + q.limit + '（演示额度 · 仅本机浏览器计数）'
+                : '<span style="color:#c86464">今日额度已用完，请明日继续（演示额度 · 仅本机浏览器计数）</span>') +
             '</p>' +
-          '</div>' +
-
-          '<div style="margin-bottom:22px;">' +
-            '<label class="section-label">选择维度（二选一）</label>' +
-            '<div style="display:flex;justify-content:center;gap:12px;">' +
-              '<button class="pill-toggle ' + (S.mode === 'civilization' ? 'active' : '') + '" data-mode="civilization">文明</button>' +
-              '<button class="pill-toggle ' + (S.mode === 'industry' ? 'active' : '') + '" data-mode="industry">行业</button>' +
-            '</div>' +
-          '</div>' +
-
-          '<div style="margin-bottom:22px;">' +
-            '<div class="select-wrapper">' +
-              '<select id="sel-dimension" class="select-styled">' +
-                '<option value="">请选择' + (S.mode === 'civilization' ? '文明' : '行业') + '...</option>' +
-                list.map(function (d) {
-                  return '<option value="' + esc(d) + '"' + (S.dimension === d ? ' selected' : '') + '>' + esc(d) + '</option>';
-                }).join('') +
-              '</select>' +
-              '<span class="select-arrow">' + I.chevron + '</span>' +
-            '</div>' +
-          '</div>' +
-
-          '<div style="margin-bottom:20px;">' +
-            '<label class="section-label">内容类型（单选）</label>' +
-            '<div id="types" style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">' +
-              WJ.CONTENT_TYPES.map(function (t) {
-                return '<button class="content-pill ' + (S.type === t.name ? 'active' : '') + '" data-type="' + esc(t.name) + '" title="' + esc(t.description) + '">' + esc(t.name) + '</button>';
-              }).join('') +
-            '</div>' +
-          '</div>' +
-
-          '<div style="margin-bottom:4px;">' +
-            '<label class="section-label">目标平台（单选）</label>' +
-            '<div id="platforms" style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">' +
-              WJ.PLATFORMS.map(function (p) {
-                return '<button class="platform-pill ' + (S.platform === p.name ? 'active' : '') + '" data-platform="' + esc(p.name) + '" title="' + esc(p.description) + '">' + esc(p.name) + '</button>';
-              }).join('') +
-            '</div>' +
-          '</div>' +
-
-          '<div class="panel-footer">' +
-            '<div style="display:flex;align-items:center;justify-content:center;gap:24px;">' +
-              '<div class="stat-item"><span class="stat-num">' + S.history.length + '</span><span class="stat-label">已生成</span></div>' +
-              '<span class="stat-divider"></span>' +
-              '<div class="stat-item"><span class="stat-num" style="font-size:14px;">' + (S.dimension ? esc(S.dimension) : '—') + '</span><span class="stat-label">内容维度</span></div>' +
-              '<span class="stat-divider"></span>' +
-              '<div class="stat-item"><span class="stat-num" style="font-size:14px;">' + esc(S.platform) + '</span><span class="stat-label">适配平台</span></div>' +
-            '</div>' +
           '</div>' +
         '</div>' +
 
@@ -1508,6 +2116,159 @@ input:focus-visible {
     '</div>';
   }
 
+  /* ---------- 创作表单 ---------- */
+  function createFormHtml(list) {
+    var ed = effectiveDim();
+    var topicInputStyle = 'width:100%;box-sizing:border-box;min-height:0;margin-top:8px;padding:10px 14px;border:1px solid rgba(201,169,110,.3);border-radius:12px;font-size:13px;color:#4a3f32;background:#fffc;resize:none;line-height:1.6;';
+
+    var h = '';
+
+    /* 维度选择 */
+    h += '<div style="margin-bottom:20px;">' +
+      '<label class="section-label">选择维度</label>' +
+      '<div style="display:flex;justify-content:center;gap:12px;margin-bottom:10px;">' +
+        '<button class="pill-toggle ' + (S.mode === 'civilization' ? 'active' : '') + '" data-mode="civilization">文明</button>' +
+        '<button class="pill-toggle ' + (S.mode === 'industry' ? 'active' : '') + '" data-mode="industry">行业</button>' +
+      '</div>' +
+      '<div class="select-wrapper">' +
+        '<select id="sel-dimension" class="select-styled">' +
+          '<option value="">请选择' + (S.mode === 'civilization' ? '文明' : '行业') + '...</option>' +
+          list.map(function (d) {
+            return '<option value="' + esc(d) + '"' + (S.dimension === d ? ' selected' : '') + '>' + esc(d) + '</option>';
+          }).join('') +
+        '</select>' +
+        '<span class="select-arrow">' + I.chevron + '</span>' +
+      '</div>' +
+    '</div>';
+
+    /* [NEW-18] 自定义主题 */
+    h += '<div style="margin-bottom:20px;">' +
+      '<label class="section-label">主题来源</label>' +
+      '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">' +
+        '<button class="content-pill ' + (S.topicMode === 'dimension' ? 'active' : '') + '" data-topicmode="dimension">只用维度</button>' +
+        '<button class="content-pill ' + (S.topicMode === 'blend' ? 'active' : '') + '" data-topicmode="blend">维度+我的主题</button>' +
+        '<button class="content-pill ' + (S.topicMode === 'custom' ? 'active' : '') + '" data-topicmode="custom">只写我的主题</button>' +
+      '</div>' +
+      (S.topicMode !== 'dimension'
+        ? '<textarea id="input-topic" class="content-textarea" style="' + topicInputStyle + '" rows="2" placeholder="例如：我们新推出的颂钵疗愈课程，主打职场女性睡前10分钟放松……">' + esc(S.customTopic) + '</textarea>'
+        : '') +
+    '</div>';
+
+    /* 内容类型 */
+    h += '<div style="margin-bottom:20px;">' +
+      '<label class="section-label">内容类型（单选）</label>' +
+      '<div id="types" style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">' +
+        WJ.CONTENT_TYPES.map(function (t) {
+          return '<button class="content-pill ' + (S.type === t.name ? 'active' : '') + '" data-type="' + esc(t.name) + '" title="' + esc(t.description) + '">' + esc(t.name) + '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+
+    /* [NEW-19] CTA */
+    h += '<div style="margin-bottom:20px;">' +
+      '<label class="section-label">结尾转化目标（CTA）</label>' +
+      '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">' +
+        WJ.CTA_OPTIONS.map(function (c) {
+          return '<button class="content-pill ' + (S.cta === c.id ? 'active' : '') + '" data-cta="' + esc(c.id) + '" title="' + esc(c.desc) + '">' + esc(c.name) + '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+
+    /* 平台 */
+    h += '<div style="margin-bottom:4px;">' +
+      '<label class="section-label">目标平台（单选）</label>' +
+      '<div id="platforms" style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">' +
+        WJ.PLATFORMS.map(function (p) {
+          return '<button class="platform-pill ' + (S.platform === p.name ? 'active' : '') + '" data-platform="' + esc(p.name) + '" title="' + esc(p.description) + '">' + esc(p.name) + '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+
+    /* [NEW-20][NEW-21] 选题灵感 / 系列大纲 */
+    h += '<div style="display:flex;justify-content:center;gap:10px;margin-top:18px;">' +
+      '<button id="btn-ideas" class="history-btn ' + (S.ideasOpen ? 'active' : '') + '"' + (S.ideasLoading ? ' disabled' : '') + '>' +
+        (S.ideasLoading ? '<span class="spinner"></span>灵感生成中...' : I.bulb + '选题灵感') +
+      '</button>' +
+      '<button id="btn-series" class="history-btn ' + (S.seriesOpen ? 'active' : '') + '"' + (S.seriesLoading ? ' disabled' : '') + '>' +
+        (S.seriesLoading ? '<span class="spinner"></span>大纲生成中...' : I.list + '系列大纲') +
+      '</button>' +
+    '</div>';
+
+    if (S.ideasOpen && S.ideas.length) h += ideasHtml();
+    if (S.seriesOpen && S.series.length) h += seriesHtml();
+
+    /* 底部状态 */
+    h += '<div class="panel-footer">' +
+      '<div style="display:flex;align-items:center;justify-content:center;gap:24px;">' +
+        '<div class="stat-item"><span class="stat-num">' + S.history.length + '</span><span class="stat-label">已生成</span></div>' +
+        '<span class="stat-divider"></span>' +
+        '<div class="stat-item"><span class="stat-num" style="font-size:14px;">' + (ed.label ? esc(ed.label) : '—') + '</span><span class="stat-label">内容主题</span></div>' +
+        '<span class="stat-divider"></span>' +
+        '<div class="stat-item"><span class="stat-num" style="font-size:14px;">' + esc(S.platform) + '</span><span class="stat-label">适配平台</span></div>' +
+      '</div>' +
+    '</div>';
+
+    return h;
+  }
+
+  /* ---------- [NEW-20] 选题灵感面板 ---------- */
+  function ideasHtml() {
+    return '<div style="margin-top:14px;padding:14px;background:#fdf9f2;border:1px solid rgba(201,169,110,.25);border-radius:14px;">' +
+      '<div style="font-size:12px;font-weight:700;color:#8a6a3a;margin-bottom:10px;">' + I.bulb + ' 选题灵感（点一条直接填入主题与平台）</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;">' +
+        S.ideas.map(function (idea, idx) {
+          return '<div class="idea-item" data-idea="' + idx + '" style="padding:8px 10px;background:#fff;border:1px solid rgba(201,169,110,.18);border-radius:10px;cursor:pointer;">' +
+            '<div style="font-size:13px;font-weight:600;color:#4a3f32;">' + esc(idea.title) + '</div>' +
+            '<div style="font-size:12px;color:#8a7a6a;margin-top:2px;">' + esc(idea.angle) + '</div>' +
+            '<div style="font-size:11px;color:#b08a4a;margin-top:3px;">推荐：' + esc(idea.type) + ' · ' + esc(idea.platform) + '</div>' +
+          '</div>';
+        }).join('') +
+      '</div></div>';
+  }
+
+  /* ---------- [NEW-21] 系列大纲面板 ---------- */
+  function seriesHtml() {
+    return '<div style="margin-top:14px;padding:14px;background:#fdf9f2;border:1px solid rgba(201,169,110,.25);border-radius:14px;">' +
+      '<div style="font-size:12px;font-weight:700;color:#8a6a3a;margin-bottom:10px;">' + I.list + ' 系列大纲（点一篇标题直接开写）</div>' +
+      '<div style="display:flex;flex-direction:column;gap:6px;">' +
+        S.series.map(function (ep, idx) {
+          return '<div class="idea-item" data-series="' + idx + '" style="padding:8px 10px;background:#fff;border:1px solid rgba(201,169,110,.18);border-radius:10px;cursor:pointer;">' +
+            '<div style="font-size:13px;font-weight:600;color:#4a3f32;">' + esc(ep.title) + '</div>' +
+            '<div style="font-size:12px;color:#8a7a6a;margin-top:2px;">要点：' + esc(ep.points) + '</div>' +
+            '<div style="font-size:11px;color:#b08a4a;margin-top:3px;">篇间钩子：' + esc(ep.hook) + '</div>' +
+          '</div>';
+        }).join('') +
+      '</div></div>';
+  }
+
+  /* ---------- 改写表单 ---------- */
+  function rewriteFormHtml() {
+    var h = '';
+    h += '<div style="margin-bottom:18px;">' +
+      '<label class="section-label">粘贴你要改的文案</label>' +
+      '<textarea id="input-rewrite" class="content-textarea" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid rgba(201,169,110,.3);border-radius:12px;font-size:13px;color:#4a3f32;background:#fffc;min-height:140px;resize:vertical;line-height:1.7;" placeholder="把已有文章/文案粘进来，下面选改写方式……">' + esc(S.rewriteText) + '</textarea>' +
+    '</div>';
+    h += '<div style="margin-bottom:18px;">' +
+      '<label class="section-label">改写方式</label>' +
+      '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">' +
+        ['润色', '精简', '扩写', '换平台'].map(function (m) {
+          var desc = { '润色': '保留结构，提升语言质感', '精简': '压缩到40%-60%，砍废话', '扩写': '扩充至2倍左右，补案例细节', '换平台': '改写成' + S.platform + '的本地形态' }[m];
+          return '<button class="content-pill ' + (S.rewriteMode === m ? 'active' : '') + '" data-rewritemode="' + esc(m) + '" title="' + esc(desc) + '">' + esc(m) + '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+    h += '<div style="margin-bottom:4px;">' +
+      '<label class="section-label">目标平台（单选）</label>' +
+      '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">' +
+        WJ.PLATFORMS.map(function (p) {
+          return '<button class="platform-pill ' + (S.platform === p.name ? 'active' : '') + '" data-platform="' + esc(p.name) + '" title="' + esc(p.description) + '">' + esc(p.name) + '</button>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+    return h;
+  }
+
+  /* ---------- 历史面板 ---------- */
   function historyHtml() {
     if (S.history.length === 0) {
       return '<div class="panel-card history-panel"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">' +
@@ -1519,6 +2280,9 @@ input:focus-visible {
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">' +
         '<div style="display:flex;align-items:center;gap:8px;">' + I.history + '<h3 style="font-size:14px;font-weight:500;color:#5a4d3f;margin:0;">生成历史</h3></div>' +
         '<div style="display:flex;align-items:center;gap:4px;">' +
+          '<button id="btn-history-export" class="icon-btn" title="导出备份(JSON)">' + I.down + '</button>' +
+          '<button id="btn-history-import" class="icon-btn" title="导入备份(JSON)">' + I.upload + '</button>' +
+          '<input type="file" id="history-file" accept=".json,application/json" style="display:none;">' +
           '<button id="btn-history-clear" class="icon-btn" title="清空历史">' + I.trash + '</button>' +
           '<button id="btn-history-close" class="icon-btn">' + I.close + '</button>' +
         '</div>' +
@@ -1543,12 +2307,56 @@ input:focus-visible {
       '<button id="btn-retry" class="retry-btn">重试</button></div>';
   }
 
+  /* ---------- 结果区 ---------- */
   function resultHtml() {
+    /* 流式生成中：实时回显 */
+    if (S.loading) {
+      if (!S.streamText) return '';
+      return '<div class="panel-card result-panel">' +
+        '<div style="font-size:12px;color:#8a6a3a;margin-bottom:8px;">' + esc(S.loadLabel || '生成中') + ' · 实时回显</div>' +
+        '<div id="stream-box" style="max-height:320px;overflow-y:auto;font-size:13px;line-height:1.8;color:#5a4d3f;white-space:pre-wrap;background:#fdf9f2;border:1px solid rgba(201,169,110,.2);border-radius:12px;padding:14px;">' + esc(S.streamText) + '</div>' +
+      '</div>';
+    }
     if (!S.content) return '';
+
+    var audit = WJ.audit(S.content);
+    var ed = effectiveDim();
+    var riskHtml = '';
+    if (audit.risks.length) {
+      riskHtml = '<div style="margin-top:6px;font-size:12px;color:#c86464;">风险词 ' + audit.risks.length + ' 组：' +
+        audit.risks.map(function (r) { return esc(r.word) + '×' + r.count; }).join('、') +
+        '<span style="color:#9a8a78;">（发布前请人工确认合规）</span></div>';
+    }
+
+    /* [NEW-23] 免责 / 合规卡片 */
+    var noticeCards = '';
+    if (S.workMode === 'create' && ed.mystery) {
+      noticeCards += '<div style="margin-top:12px;padding:10px 14px;background:#fdf6ec;border:1px solid #ecd9b8;border-radius:10px;font-size:12px;color:#8a6a3a;line-height:1.7;">' +
+        I.alert + ' <b>传说维度提示：</b>' + esc(WJ.DISCLAIMER) + '</div>';
+    }
+    if (S.workMode === 'create' && ed.sensitive && WJ.COMPLIANCE[S.dimension]) {
+      noticeCards += '<div style="margin-top:12px;padding:10px 14px;background:#fdeeee;border:1px solid #e8c8c8;border-radius:10px;font-size:12px;color:#a05050;line-height:1.7;">' +
+        I.alert + ' <b>合规检查清单（' + esc(S.dimension) + '）：</b><br>' +
+        WJ.COMPLIANCE[S.dimension].map(function (c) { return '· ' + esc(c); }).join('<br>') + '</div>';
+    }
+
+    /* [NEW-26] 配图提示词 */
+    var imgPromptHtml = '';
+    if (S.imgPromptsOpen) {
+      var prompts = WJ.imagePrompts(S.content, ed.label || S.dimension || '主题');
+      imgPromptHtml = '<div style="margin-top:10px;padding:12px 14px;background:#f4f1ea;border-radius:10px;">' +
+        '<div style="font-size:12px;font-weight:700;color:#6a5d4d;margin-bottom:6px;">AI 配图提示词（粘贴到即梦 / Midjourney 即可出真实配图）</div>' +
+        prompts.map(function (p) {
+          return '<div style="font-size:12px;color:#6a5d4d;line-height:1.7;margin:4px 0;">' + esc(p) + '</div>';
+        }).join('') +
+        '<button id="btn-copy-imgprompts" class="action-btn" style="margin-top:6px;">' + I.copy + '复制全部提示词</button>' +
+      '</div>';
+    }
+
     return '<div class="panel-card result-panel">' +
       '<div class="result-header">' +
         '<div style="display:flex;align-items:center;gap:10px;">' +
-          '<h3 style="font-size:15px;font-weight:600;color:#3a3328;margin:0;">生成结果</h3>' +
+          '<h3 style="font-size:15px;font-weight:600;color:#3a3328;margin:0;">' + (S.workMode === 'rewrite' ? '改写结果' : '生成结果') + '</h3>' +
           '<span class="result-tag">' + esc(S.platform) + '</span>' +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
@@ -1564,6 +2372,16 @@ input:focus-visible {
         '</div>' +
       '</div>' +
 
+      /* [NEW-22] 内容体检 */
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px;">' +
+        '<span style="font-size:11px;color:#6a5d4d;background:#f4efe6;border-radius:999px;padding:4px 10px;">字数 ' + audit.chars + '</span>' +
+        '<span style="font-size:11px;color:#6a5d4d;background:#f4efe6;border-radius:999px;padding:4px 10px;">约读 ' + audit.minutes + ' 分钟</span>' +
+        '<span style="font-size:11px;color:#6a5d4d;background:#f4efe6;border-radius:999px;padding:4px 10px;">金句 ' + audit.golden + '</span>' +
+        '<span style="font-size:11px;color:' + (audit.risks.length ? '#c86464' : '#5a9060') + ';background:' + (audit.risks.length ? '#fdeeee' : '#edf4ec') + ';border-radius:999px;padding:4px 10px;">风险词 ' + audit.risks.length + '</span>' +
+      '</div>' +
+      riskHtml +
+      noticeCards +
+
       (S.titles.length > 0 ? '<div class="title-selector">' +
         '<div style="font-size:12px;color:#8a7a6a;margin-bottom:8px;">💡 选一个爆款标题：</div>' +
         '<div style="display:flex;flex-direction:column;gap:6px;">' +
@@ -1573,6 +2391,9 @@ input:focus-visible {
         '</div></div>' : '') +
 
       '<textarea id="content" class="content-textarea">' + esc(S.content) + '</textarea>' +
+
+      '<button id="btn-imgprompts" class="action-btn" style="margin-top:10px;">' + I.spark + ' 配图提示词 ' + I.chevron + '</button>' +
+      imgPromptHtml +
 
       '<div class="publish-bar">' +
         '<span style="font-size:12px;color:#8a7a6a;">一键发布到：</span>' +
@@ -1592,6 +2413,9 @@ input:focus-visible {
     var slot = $('result-slot');
     if (slot) slot.innerHTML = resultHtml();
     bindResult();
+    /* 流式回显自动滚到底 */
+    var sb = $('stream-box');
+    if (sb) sb.scrollTop = sb.scrollHeight;
   }
 
   function refreshAll() {
@@ -1602,7 +2426,7 @@ input:focus-visible {
   /* ==================== 事件绑定 ==================== */
   function bindShell() {
     var bg = $('btn-generate');
-    if (bg) bg.onclick = function () { doGenerate(false); };
+    if (bg) bg.onclick = function () { doMain(); };
 
     var bh = $('btn-history');
     if (bh) bh.onclick = function () { S.historyOpen = !S.historyOpen; refreshAll(); };
@@ -1615,8 +2439,43 @@ input:focus-visible {
         refreshAll();
       }
     };
+
+    /* [NEW-25] 历史导出/导入 */
+    var bex = $('btn-history-export');
+    if (bex) bex.onclick = function () { WJ.history.exportJson(); };
+    var bim = $('btn-history-import');
+    var fin = $('history-file');
+    if (bim && fin) {
+      bim.onclick = function () { fin.click(); };
+      fin.onchange = function () {
+        var file = fin.files && fin.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          var merged = WJ.history.importJsonText(String(reader.result || ''));
+          if (merged === null) {
+            S.error = '导入失败：不是有效的历史备份文件';
+          } else {
+            S.history = merged;
+            S.error = '';
+          }
+          refreshAll();
+        };
+        reader.readAsText(file, 'utf-8');
+      };
+    }
+
     var bs = $('btn-settings');
     if (bs) bs.onclick = openSettings;
+
+    /* 工作/维度/主题/类型/CTA/平台 切换 */
+    Array.prototype.forEach.call(document.querySelectorAll('[data-workmode]'), function (el) {
+      el.onclick = function () {
+        S.workMode = el.getAttribute('data-workmode');
+        S.error = '';
+        refreshAll();
+      };
+    });
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-mode]'), function (el) {
       el.onclick = function () {
@@ -1629,6 +2488,16 @@ input:focus-visible {
     var sel = $('sel-dimension');
     if (sel) sel.onchange = function () { S.dimension = sel.value; refreshAll(); };
 
+    Array.prototype.forEach.call(document.querySelectorAll('[data-topicmode]'), function (el) {
+      el.onclick = function () {
+        S.topicMode = el.getAttribute('data-topicmode');
+        refreshAll();
+      };
+    });
+
+    var topicInput = $('input-topic');
+    if (topicInput) topicInput.oninput = function () { S.customTopic = topicInput.value; };
+
     Array.prototype.forEach.call(document.querySelectorAll('[data-type]'), function (el) {
       el.onclick = function () {
         S.type = el.getAttribute('data-type');
@@ -1639,8 +2508,61 @@ input:focus-visible {
       };
     });
 
+    Array.prototype.forEach.call(document.querySelectorAll('[data-cta]'), function (el) {
+      el.onclick = function () {
+        S.cta = el.getAttribute('data-cta');
+        refreshAll();
+      };
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rewritemode]'), function (el) {
+      el.onclick = function () {
+        S.rewriteMode = el.getAttribute('data-rewritemode');
+        refreshAll();
+      };
+    });
+
+    var rw = $('input-rewrite');
+    if (rw) rw.oninput = function () { S.rewriteText = rw.value; };
+
     Array.prototype.forEach.call(document.querySelectorAll('[data-platform]'), function (el) {
       el.onclick = function () { S.platform = el.getAttribute('data-platform'); refreshAll(); };
+    });
+
+    /* [NEW-20][NEW-21] */
+    var bi = $('btn-ideas');
+    if (bi) bi.onclick = doIdeas;
+    var bsr = $('btn-series');
+    if (bsr) bsr.onclick = doSeries;
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-idea]'), function (el) {
+      el.onclick = function () {
+        var idea = S.ideas[Number(el.getAttribute('data-idea'))];
+        if (!idea) return;
+        S.customTopic = idea.title + '（' + idea.angle + '）';
+        S.topicMode = 'blend';
+        if (!S.dimension) {
+          // 维度为空时按推荐类型/平台落位，主题独立成篇
+          S.topicMode = 'custom';
+        }
+        S.type = WJ.CONTENT_TYPES.some(function (t) { return t.name === idea.type; }) ? idea.type : S.type;
+        S.platform = WJ.PLATFORMS.some(function (p) { return p.name === idea.platform; }) ? idea.platform : S.platform;
+        S.ideasOpen = false;
+        refreshAll();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+    });
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-series]'), function (el) {
+      el.onclick = function () {
+        var ep = S.series[Number(el.getAttribute('data-series'))];
+        if (!ep) return;
+        S.customTopic = ep.title;
+        S.topicMode = S.dimension ? 'blend' : 'custom';
+        S.seriesOpen = false;
+        refreshAll();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
     });
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-hid]'), function (el) {
@@ -1658,12 +2580,12 @@ input:focus-visible {
     });
 
     var br = $('btn-retry');
-    if (br) br.onclick = function () { S.error = ''; doGenerate(false); };
+    if (br) br.onclick = function () { S.error = ''; doMain(); };
   }
 
   function bindResult() {
     var br = $('btn-regen');
-    if (br) br.onclick = function () { doGenerate(true); };
+    if (br) br.onclick = function () { doMain(true); };
 
     var bc = $('btn-copy');
     if (bc) bc.onclick = function () {
@@ -1684,11 +2606,25 @@ input:focus-visible {
       el.onclick = function () {
         S.dropdown = false;
         var kind = el.getAttribute('data-dl');
-        if (kind === 'md') WJ.downloadMarkdown(S.content, S.dimension || '内容');
-        else WJ.downloadWord(S.content, S.dimension || '内容', S.title);
+        var ed = effectiveDim();
+        if (kind === 'md') WJ.downloadMarkdown(S.content, ed.label || '内容');
+        else WJ.downloadWord(S.content, ed.label || '内容', S.title);
         renderPanel();
       };
     });
+
+    /* [NEW-26] 配图提示词 */
+    var bip = $('btn-imgprompts');
+    if (bip) bip.onclick = function () { S.imgPromptsOpen = !S.imgPromptsOpen; renderPanel(); };
+    var bcip = $('btn-copy-imgprompts');
+    if (bcip) bcip.onclick = function () {
+      var prompts = WJ.imagePrompts(S.content, effectiveDim().label || S.dimension || '主题');
+      WJ.copyText(prompts.join('\n')).then(function () {
+        S.toast = '配图提示词已复制';
+        renderPanel();
+        setTimeout(function () { S.toast = ''; renderPanel(); }, 2000);
+      });
+    };
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-title]'), function (el) {
       el.onclick = function () {
@@ -1721,8 +2657,12 @@ input:focus-visible {
     var item = S.history.filter(function (h) { return h.id === id; })[0];
     if (!item) return;
     var isCiv = WJ.CIVILIZATIONS.indexOf(item.dimension) >= 0;
+    var isInd = WJ.INDUSTRIES.indexOf(item.dimension) >= 0;
+    S.workMode = 'create';
     S.mode = isCiv ? 'civilization' : 'industry';
-    S.dimension = item.dimension;
+    S.dimension = isCiv || isInd ? item.dimension : '';
+    S.topicMode = (isCiv || isInd) ? 'dimension' : 'custom';
+    S.customTopic = (isCiv || isInd) ? '' : item.dimension;
     S.type = (item.contentTypes || [])[0] || '深度长文';
     S.platform = (item.platforms || [])[0] || '公众号';
     S.content = item.content;
@@ -1736,7 +2676,7 @@ input:focus-visible {
     refreshAll();
   }
 
-  /* ==================== 生成 ==================== */
+  /* ==================== 生成主流程 ==================== */
   function maxTokensFor(type) {
     switch (type) {
       case '深度长文': return 16000;
@@ -1749,35 +2689,61 @@ input:focus-visible {
     }
   }
 
-  function doGenerate(isRegen) {
+  function doMain(isRegen) {
     if (S.loading) return;
     S.error = '';
-    if (!S.dimension) { S.error = '请先选择一个内容维度'; refreshAll(); return; }
+    if (S.workMode === 'rewrite') doRewrite();
+    else doGenerate(!!isRegen);
+  }
+
+  function doGenerate(isRegen) {
+    var ed = effectiveDim();
+    if (!ed.promptDim) {
+      S.error = S.topicMode === 'custom'
+        ? '请先填写自定义主题'
+        : '请先选择一个内容维度';
+      refreshAll(); return;
+    }
     if (!WJ.quota.allowed()) { S.error = '今日额度已用完，请明日继续'; refreshAll(); return; }
 
     S.loading = true;
+    S.loadLabel = isRegen ? '换一篇生成中' : '生成中';
     S.content = '';
+    S.streamText = '';
     S.titles = [];
     S.title = '';
+    S.riskOpen = false;
+    S.imgPromptsOpen = false;
     refreshAll();
 
-    var dimension = S.dimension;
+    var dimension = ed.promptDim;
     var type = S.type;
     var platform = S.platform;
+    var opts = { cta: S.cta, mystery: ed.mystery };
+    var lastPaint = 0;
+
+    function onDelta(full) {
+      S.streamText = full;
+      var now = Date.now();
+      if (now - lastPaint > 400) {
+        lastPaint = now;
+        renderPanel();
+      }
+    }
 
     WJ.generateTitles(dimension, type).then(function (titles) {
       S.titles = titles && titles.length ? titles : [];
-      var title = S.titles[0] || (dimension + '深度解读');
+      var title = S.titles[0] || (ed.label + '深度解读');
       S.title = title;
       var prompt = isRegen
-        ? WJ.buildRegenPrompt(dimension, type, platform, title)
-        : WJ.buildPrompt(dimension, type, platform, title);
+        ? WJ.buildRegenPrompt(dimension, type, platform, title, opts)
+        : WJ.buildPrompt(dimension, type, platform, title, opts);
       var messages = [
         { role: 'system', content: WJ.SYSTEM_PROMPT },
         { role: 'user', content: prompt },
       ];
       var temp = isRegen ? 0.95 : 0.85;
-      return WJ.generateContent(messages, temp, maxTokensFor(type)).then(function (r) {
+      return WJ.generateContent(messages, temp, maxTokensFor(type), onDelta).then(function (r) {
         return { body: r.content, truncated: r.truncated };
       });
     }).then(function (out) {
@@ -1789,7 +2755,7 @@ input:focus-visible {
       S.quota = WJ.quota.get();
       S.history = WJ.history.add({
         id: String(Date.now()),
-        dimension: dimension,
+        dimension: ed.label || dimension,
         contentTypes: [type],
         platforms: [platform],
         content: S.content,
@@ -1797,10 +2763,158 @@ input:focus-visible {
       });
       S.published = {};
       S.loading = false;
+      S.streamText = '';
       refreshAll();
     }).catch(function (err) {
       S.error = err && err.message ? err.message : '内容生成失败，请检查网络后重试';
       S.loading = false;
+      S.streamText = '';
+      refreshAll();
+    });
+  }
+
+  /* [NEW-17] 改写模式 */
+  function doRewrite() {
+    var text = (S.rewriteText || '').trim();
+    if (text.length < 30) { S.error = '请先粘贴至少 30 字的原文案'; refreshAll(); return; }
+    if (!WJ.quota.allowed()) { S.error = '今日额度已用完，请明日继续'; refreshAll(); return; }
+
+    S.loading = true;
+    S.loadLabel = '改写中';
+    S.content = '';
+    S.streamText = '';
+    S.titles = [];
+    S.title = '';
+    refreshAll();
+
+    var platform = S.platform;
+    var ed = effectiveDim();
+    var dimension = (S.topicMode !== 'custom' && S.dimension) ? S.dimension : '';
+    var prompt = WJ.buildRewritePrompt(text, S.rewriteMode, platform, dimension);
+    var messages = [
+      { role: 'system', content: WJ.SYSTEM_PROMPT },
+      { role: 'user', content: prompt },
+    ];
+    var lastPaint = 0;
+
+    function onDelta(full) {
+      S.streamText = full;
+      var now = Date.now();
+      if (now - lastPaint > 400) {
+        lastPaint = now;
+        renderPanel();
+      }
+    }
+
+    WJ.generateContent(messages, 0.8, 16000, onDelta).then(function (r) {
+      S.content = r.content;
+      if (r.truncated) {
+        S.toast = '提示：本次输出达到长度上限，内容可能被截断，可重试';
+      }
+      WJ.quota.consume();
+      S.quota = WJ.quota.get();
+      S.history = WJ.history.add({
+        id: String(Date.now()),
+        dimension: '改写·' + S.rewriteMode + (dimension ? '·' + dimension : ''),
+        contentTypes: ['改写'],
+        platforms: [platform],
+        content: S.content,
+        timestamp: new Date().toLocaleString('zh-CN'),
+      });
+      S.published = {};
+      S.loading = false;
+      S.streamText = '';
+      refreshAll();
+    }).catch(function (err) {
+      S.error = err && err.message ? err.message : '改写失败，请检查网络后重试';
+      S.loading = false;
+      S.streamText = '';
+      refreshAll();
+    });
+  }
+
+  /* [NEW-20] 选题灵感 */
+  function doIdeas() {
+    if (S.ideasLoading || S.loading) return;
+    var ed = effectiveDim();
+    if (!ed.promptDim) {
+      S.error = S.topicMode === 'custom' ? '请先填写自定义主题' : '请先选择一个内容维度';
+      refreshAll(); return;
+    }
+    S.error = '';
+    S.ideasLoading = true;
+    S.ideasOpen = true;
+    refreshAll();
+
+    var messages = [
+      { role: 'system', content: WJ.SYSTEM_PROMPT },
+      { role: 'user', content: WJ.buildIdeasPrompt(ed.promptDim) },
+    ];
+    WJ.callModel(messages, 0.9, 4000).then(function (r) {
+      var ideas = [];
+      String(r.content || '').split('\n').forEach(function (line) {
+        var t = line.trim().replace(/^[-*\d.、]+\s*/, '');
+        if (!t) return;
+        var parts = t.split('|').map(function (p) { return p.trim(); });
+        if (parts.length >= 4 && parts[0]) {
+          ideas.push({ title: parts[0], angle: parts[1], type: parts[2], platform: parts[3] });
+        }
+      });
+      if (!ideas.length) {
+        S.error = '选题灵感解析失败（模型输出格式异常），请重试一次';
+      } else {
+        S.ideas = ideas.slice(0, 8);
+        WJ.quota.consume();
+        S.quota = WJ.quota.get();
+      }
+      S.ideasLoading = false;
+      refreshAll();
+    }).catch(function (err) {
+      S.error = err && err.message ? err.message : '选题灵感生成失败，请重试';
+      S.ideasLoading = false;
+      refreshAll();
+    });
+  }
+
+  /* [NEW-21] 系列大纲 */
+  function doSeries() {
+    if (S.seriesLoading || S.loading) return;
+    var ed = effectiveDim();
+    if (!ed.promptDim) {
+      S.error = S.topicMode === 'custom' ? '请先填写自定义主题' : '请先选择一个内容维度';
+      refreshAll(); return;
+    }
+    S.error = '';
+    S.seriesLoading = true;
+    S.seriesOpen = true;
+    refreshAll();
+
+    var messages = [
+      { role: 'system', content: WJ.SYSTEM_PROMPT },
+      { role: 'user', content: WJ.buildSeriesPrompt(ed.promptDim, 5) },
+    ];
+    WJ.callModel(messages, 0.85, 4000).then(function (r) {
+      var eps = [];
+      String(r.content || '').split('\n').forEach(function (line) {
+        var t = line.trim().replace(/^[-*\d.、]+\s*/, '');
+        if (!t) return;
+        var parts = t.split('|').map(function (p) { return p.trim(); });
+        if (parts.length >= 3 && parts[0]) {
+          eps.push({ title: parts[0], points: parts[1], hook: parts[2] });
+        }
+      });
+      if (!eps.length) {
+        S.error = '系列大纲解析失败（模型输出格式异常），请重试一次';
+      } else {
+        S.series = eps.slice(0, 6);
+        WJ.quota.consume();
+        S.quota = WJ.quota.get();
+      }
+      S.seriesLoading = false;
+      refreshAll();
+    }).catch(function (err) {
+      S.error = err && err.message ? err.message : '系列大纲生成失败，请重试';
+      S.seriesLoading = false;
       refreshAll();
     });
   }
@@ -1809,7 +2923,7 @@ input:focus-visible {
   function openPreview(platform) {
     S.preview = {
       platform: platform,
-      dimension: S.dimension,
+      dimension: effectiveDim().label || S.dimension || '主题',
       type: S.type,
       content: S.content,
       step: 'preview',        // preview | confirm | published
